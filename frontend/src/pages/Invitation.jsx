@@ -302,7 +302,7 @@ function Invitation() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: shouldReduceMotion ? 0 : 0.6 }}
-            className="glass-card rounded-3xl p-10 md:p-12 space-y-6"
+            className="glass-card rounded-3xl p-10 md:p-12 [&>*+*]:mt-6"
           >
             <TicketsPlane className="w-12 h-12 md:w-16 md:h-16 text-rose-dark fill-rose-dark/30 mx-auto animate-float" />
 
