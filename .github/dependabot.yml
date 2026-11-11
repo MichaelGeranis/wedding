@@ -17,6 +17,13 @@ updates:
     groups:
       npm:
         patterns: ["*"]
+    ignore:
+      # ESLint 10: eslint-plugin-react (7.37.5, its latest) supports ESLint up
+      # to 9 only. Remove once it supports 10.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker
     directories:
@@ -27,6 +34,16 @@ updates:
     groups:
       docker:
         patterns: ["*"]
+    ignore:
+      # Python moves together in the Dockerfile, pyproject.toml's
+      # requires-python and CI, so the image alone is never bumped. 3.15 also
+      # waits for PyYAML (via uvicorn[standard]) to publish cp315 wheels.
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # Node: only even-numbered LTS releases, moved by hand together with CI.
+      # Odd-numbered releases are short-lived.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker-compose
     directory: /
@@ -35,6 +52,11 @@ updates:
     groups:
       docker-compose:
         patterns: ["*"]
+    ignore:
+      # A new PostgreSQL major can't open an existing data volume (it needs
+      # pg_upgrade or a dump and restore), so majors are moved by hand.
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
