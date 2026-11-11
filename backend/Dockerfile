@@ -1,5 +1,5 @@
 # Multi-stage build for smaller image size
-FROM python:3.13-slim as builder
+FROM python:3.15-slim as builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -23,7 +23,7 @@ RUN uv pip install --system fastapi uvicorn[standard] pydantic pydantic-settings
     slowapi isort greenlet types-python-jose httpx qrcode[pil]
 
 # Production stage
-FROM python:3.13-slim
+FROM python:3.15-slim
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
