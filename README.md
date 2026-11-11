@@ -72,11 +72,11 @@ CloudFormation); any host that runs Docker Compose works too.
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Python 3.13, FastAPI, async SQLAlchemy, Alembic, Pydantic settings, SlowAPI |
-| Frontend | React 18, Vite, Tailwind CSS, React Hook Form + Zod, i18next, Framer Motion |
-| Database | PostgreSQL 16 |
+| Backend | Python 3.14, FastAPI, async SQLAlchemy, Alembic, Pydantic settings, SlowAPI |
+| Frontend | React 19, Vite 8, Tailwind CSS 4, React Router 8, React Hook Form + Zod 4, i18next, Framer Motion |
+| Database | PostgreSQL 18 |
 | Infrastructure | Docker Compose; AWS CloudFormation (ECS Fargate, RDS) |
-| Testing | pytest (in-memory SQLite), ESLint |
+| Testing | pytest (in-memory SQLite), Vitest, ESLint, Ruff, mypy |
 
 The backend is layered: routes handle HTTP, services hold the rules,
 repositories do data access, and one dependency (`get_db`) owns each request's
@@ -84,7 +84,7 @@ transaction. See [CLAUDE.md](CLAUDE.md) for the conventions in detail.
 
 ## Development
 
-Prerequisites: Python 3.13, [uv](https://docs.astral.sh/uv/), Node.js 20+ and Docker.
+Prerequisites: Python 3.14, [uv](https://docs.astral.sh/uv/), Node.js 26 (LTS) and Docker.
 
 ```bash
 make install                      # backend (uv) and frontend (npm) dependencies
@@ -100,8 +100,9 @@ Run the checks before a pull request:
 
 ```bash
 make test                         # backend tests (no database needed)
-make lint-backend
+make lint-backend                 # ruff and mypy
 make lint-frontend
+cd frontend && npm test           # frontend unit tests (Vitest)
 ```
 
 Database migrations, troubleshooting and the API reference are in
