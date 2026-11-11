@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { motion, AnimatePresence } from 'framer-motion'
 import { UserPlus, Search, X, Users, ArrowLeft, Download, Upload } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/auth'
 import { invitedGuestsAPI } from '../services/api'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -15,7 +15,10 @@ function InvitedGuestsPage() {
   const { isAuthenticated } = useAuth()
   const [guests, setGuests] = useState([])
   const [stats, setStats] = useState(null)
-  const [loading, setLoading] = useState(false)
+  // Bumped to reload the list; the list is loading until that reload's response arrives.
+  const [reloadCount, setReloadCount] = useState(0)
+  const [loadedCount, setLoadedCount] = useState(null)
+  const loading = loadedCount !== reloadCount
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [isExporting, setIsExporting] = useState(false)
@@ -37,20 +40,6 @@ function InvitedGuestsPage() {
     rsvp_received: false,
   })
 
-  const fetchGuests = async () => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      const response = await invitedGuestsAPI.getInvitedGuests()
-      setGuests(response.guests)
-    } catch (err) {
-      setError(err.message || 'Failed to load invited guests')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const fetchStats = async () => {
     try {
       const response = await invitedGuestsAPI.getInvitedGuestsStats()
@@ -61,11 +50,34 @@ function InvitedGuestsPage() {
   }
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchGuests()
-      fetchStats()
+    if (!isAuthenticated) return
+    let ignore = false
+
+    invitedGuestsAPI
+      .getInvitedGuests()
+      .then((response) => {
+        if (ignore) return
+        setGuests(response.guests)
+        setError(null)
+      })
+      .catch((err) => {
+        if (!ignore) setError(err.message || 'Failed to load invited guests')
+      })
+      .finally(() => {
+        if (!ignore) setLoadedCount(reloadCount)
+      })
+
+    invitedGuestsAPI
+      .getInvitedGuestsStats()
+      .then((response) => {
+        if (!ignore) setStats(response)
+      })
+      .catch((err) => console.error('Failed to load stats:', err))
+
+    return () => {
+      ignore = true
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, reloadCount])
 
   const resetForm = () => {
     setFormData({ name: '', phone: '', notes: '' })
@@ -167,8 +179,7 @@ function InvitedGuestsPage() {
 
       // Refresh the guest list and stats if any imports were successful
       if (result.success_count > 0) {
-        fetchGuests()
-        fetchStats()
+        setReloadCount((count) => count + 1)
       }
     } catch (error) {
       console.error('Import failed:', error)
