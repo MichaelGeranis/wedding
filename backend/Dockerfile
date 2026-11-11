@@ -1,5 +1,5 @@
 # Multi-stage build for smaller image size
-FROM python:3.14-slim AS builder
+FROM python:3.15-slim AS builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -23,7 +23,7 @@ RUN uv venv /opt/venv \
     && uv pip install --python /opt/venv --no-cache -r pyproject.toml
 
 # Production stage
-FROM python:3.14-slim
+FROM python:3.15-slim
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
