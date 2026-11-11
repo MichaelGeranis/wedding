@@ -218,7 +218,7 @@ function InvitedGuestsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="glass-card rounded-3xl p-10 md:p-12 w-full max-w-md shadow-2xl text-center"
+          className="glass-card rounded-3xl p-10 md:p-12 w-full max-w-md text-center"
         >
           <h1 className="font-serif text-3xl md:text-4xl text-charcoal font-bold mb-4">
             {t('invited_guests.access_denied')}
@@ -239,7 +239,7 @@ function InvitedGuestsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="space-y-4"
+          className="[&>*+*]:mt-4"
         >
           <Link
             to="/admin"
@@ -396,7 +396,7 @@ function InvitedGuestsPage() {
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="glass-card rounded-3xl p-8 w-full max-w-lg shadow-2xl"
+                className="glass-card rounded-3xl p-8 w-full max-w-lg"
               >
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="font-serif text-2xl text-charcoal font-bold">
@@ -421,7 +421,7 @@ function InvitedGuestsPage() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-                  <div className="space-y-2">
+                  <div className="[&>*+*]:mt-2">
                     <Label htmlFor="name">{t('invited_guests.guest_name')} *</Label>
                     <Input
                       id="name"
@@ -434,7 +434,7 @@ function InvitedGuestsPage() {
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="[&>*+*]:mt-2">
                     <Label htmlFor="phone">{t('invited_guests.phone')} *</Label>
                     <Input
                       id="phone"
@@ -451,7 +451,7 @@ function InvitedGuestsPage() {
                     </p>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="[&>*+*]:mt-2">
                     <Label htmlFor="notes">{t('invited_guests.notes')}</Label>
                     <Textarea
                       id="notes"
@@ -530,7 +530,7 @@ function InvitedGuestsPage() {
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="glass-card rounded-3xl p-8 w-full max-w-lg shadow-2xl"
+                className="glass-card rounded-3xl p-8 w-full max-w-lg"
               >
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="font-serif text-2xl text-charcoal font-bold">

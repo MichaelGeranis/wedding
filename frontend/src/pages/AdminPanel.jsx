@@ -156,7 +156,7 @@ function AdminPanel() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="glass-card rounded-3xl p-10 md:p-12 w-full max-w-md shadow-2xl"
+          className="glass-card rounded-3xl p-10 md:p-12 w-full max-w-md"
         >
           <h1 className="font-serif text-3xl md:text-4xl text-charcoal font-bold text-center mb-8">
             {t('admin.login_title')}
@@ -173,7 +173,7 @@ function AdminPanel() {
           )}
 
           <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
+            <div className="[&>*+*]:mt-2">
               <Label htmlFor="username">{t('admin.username')}</Label>
               <Input
                 type="text"
@@ -186,7 +186,7 @@ function AdminPanel() {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="[&>*+*]:mt-2">
               <Label htmlFor="password">{t('admin.password')}</Label>
               <Input
                 type="password"

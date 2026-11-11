@@ -45,6 +45,12 @@ layer(base);
   ::file-selector-button {
     border-color: var(--color-gray-200, currentcolor);
   }
+
+  /* Tailwind CSS 4 gives buttons the default cursor; keep v3's pointer. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 @utility gradient-bg {

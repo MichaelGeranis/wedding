@@ -166,7 +166,7 @@ function Invitation() {
           {/* Invitation Text */}
           <motion.p
             {...getAnimationProps({ opacity: 0 }, 1)}
-            className="text-charcoal/80 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed"
+            className="text-charcoal/80 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed md:leading-7"
           >
             {t('invitation.request_pleasure')} {t('invitation.at_their_wedding')}
           </motion.p>
@@ -174,7 +174,7 @@ function Invitation() {
           {/* Wedding Details */}
           <motion.div
             {...getAnimationProps({ opacity: 0, y: 20 }, 1.4)}
-            className="glass-card rounded-3xl p-8 md:p-10 shadow-2xl"
+            className="glass-card rounded-3xl p-8 md:p-10"
           >
             <div className="max-w-md mx-auto space-y-6">
               {weddingDate && (
@@ -302,7 +302,7 @@ function Invitation() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: shouldReduceMotion ? 0 : 0.6 }}
-            className="glass-card rounded-3xl p-10 md:p-12 space-y-6 shadow-2xl"
+            className="glass-card rounded-3xl p-10 md:p-12 space-y-6"
           >
             <TicketsPlane className="w-12 h-12 md:w-16 md:h-16 text-rose-dark fill-rose-dark/30 mx-auto animate-float" />
 
@@ -310,7 +310,7 @@ function Invitation() {
               {t('invitation.will_you_join')}
             </h2>
 
-            <p className="text-charcoal/70 text-base md:text-lg leading-relaxed max-w-xl mx-auto">
+            <p className="text-charcoal/70 text-base md:text-lg leading-relaxed md:leading-7 max-w-xl mx-auto">
               {t('invitation.let_us_know')}
             </p>
 

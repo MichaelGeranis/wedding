@@ -197,7 +197,7 @@ function RSVPForm() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
-          className="glass-card rounded-3xl p-10 md:p-12 max-w-lg text-center space-y-6 shadow-2xl"
+          className="glass-card rounded-3xl p-10 md:p-12 max-w-lg text-center space-y-6"
         >
           <motion.div
             initial={{ scale: 0 }}
@@ -251,7 +251,7 @@ function RSVPForm() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="glass-card rounded-3xl p-8 md:p-10 shadow-2xl"
+          className="glass-card rounded-3xl p-8 md:p-10"
         >
           {apiError && (
             <motion.div
@@ -270,7 +270,7 @@ function RSVPForm() {
                 {t('rsvp.your_response')}
               </h3>
 
-              <div className="space-y-2">
+              <div className="[&>*+*]:mt-2">
                 <Label htmlFor="guest_name">{t('rsvp.guest_name')} *</Label>
                 <Input
                   id="guest_name"
@@ -282,7 +282,7 @@ function RSVPForm() {
                 )}
               </div>
 
-              {/* <div className="space-y-2">
+              {/* <div className="[&>*+*]:mt-2">
                 <Label htmlFor="email">{t('rsvp.email')}</Label>
                 <Input
                   id="email"
@@ -295,7 +295,7 @@ function RSVPForm() {
                 )}
               </div> */}
 
-              <div className="space-y-2">
+              <div className="[&>*+*]:mt-2">
                 <Label htmlFor="phone">{t('rsvp.phone')} *</Label>
                 <div className="flex gap-2">
                   <Select
@@ -433,7 +433,7 @@ function RSVPForm() {
                       {t('rsvp.children_count_description', 'How many children will be joining you? (0-5)')}
                     </p>
 
-                    <div className="space-y-2">
+                    <div className="[&>*+*]:mt-2">
                       <Label htmlFor="children_count">{t('rsvp.children_count', 'Children')}</Label>
                       <Input
                         id="children_count"
