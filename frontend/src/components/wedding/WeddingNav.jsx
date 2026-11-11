@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router'
 import { Menu, X, AudioLines, Globe } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
@@ -38,7 +38,7 @@ export function WeddingNav() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="pointer-events-auto"
         >
-          <div className="glass-card rounded-full px-8 py-3 shadow-xl shadow-charcoal/10">
+          <div className="glass-card rounded-full px-8 py-3">
             <div className="flex items-center gap-2">
               {navItems.map((item, index) => (
                 <div key={item.path} className="flex items-center gap-2">

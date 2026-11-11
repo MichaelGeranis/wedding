@@ -25,7 +25,7 @@ def generate_guest_qr_code(token: str, frontend_url: str) -> bytes:
     qr.make(fit=True)
 
     # Create an image
-    img: PilImage = qr.make_image(fill_color="black", back_color="white")
+    img = qr.make_image(image_factory=PilImage, fill_color="black", back_color="white")
 
     # Save to bytes buffer
     buffer = io.BytesIO()

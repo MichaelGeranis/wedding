@@ -11,6 +11,9 @@ env/
 
 # Testing
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+uv.lock
 .coverage
 htmlcov/
 .tox/

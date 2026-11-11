@@ -89,7 +89,7 @@ export function ExportButton() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="absolute right-0 top-full mt-2 w-64 glass-card rounded-xl shadow-xl z-20 overflow-hidden"
+              className="absolute right-0 top-full mt-2 w-64 glass-card rounded-xl z-20 overflow-hidden"
             >
               {exportOptions.map((option, index) => {
                 const Icon = option.icon

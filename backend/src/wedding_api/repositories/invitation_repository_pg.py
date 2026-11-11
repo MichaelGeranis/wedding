@@ -11,6 +11,13 @@ from wedding_api.models.invitation import InvitationResponse
 logger = logging.getLogger(__name__)
 
 
+def _required(value: str | None, field: str) -> str:
+    """Return a value for a NOT NULL column, failing clearly if it is missing."""
+    if value is None:
+        raise ValueError(f"Invitation field '{field}' is required")
+    return value
+
+
 class InvitationRepository:
     """Repository for wedding invitation data."""
 
@@ -80,12 +87,12 @@ class InvitationRepository:
                 invitation_model.groom_name_gr = invitation.groom_name_gr
                 invitation_model.wedding_date = invitation.wedding_date
                 invitation_model.wedding_time = invitation.ceremony_time
-                invitation_model.church_name = invitation.church_name
-                invitation_model.church_address = invitation.church_address
-                invitation_model.church_city = invitation.church_city
-                invitation_model.church_state = invitation.church_state
-                invitation_model.church_zip = invitation.church_zip
-                invitation_model.church_maps_url = invitation.church_maps_url
+                invitation_model.church_name = _required(invitation.church_name, "church_name")
+                invitation_model.church_address = _required(invitation.church_address, "church_address")
+                invitation_model.church_city = _required(invitation.church_city, "church_city")
+                invitation_model.church_state = _required(invitation.church_state, "church_state")
+                invitation_model.church_zip = _required(invitation.church_zip, "church_zip")
+                invitation_model.church_maps_url = _required(invitation.church_maps_url, "church_maps_url")
                 invitation_model.church_name_gr = invitation.church_name_gr
                 invitation_model.church_address_gr = invitation.church_address_gr
                 invitation_model.church_city_gr = invitation.church_city_gr
@@ -94,7 +101,7 @@ class InvitationRepository:
                 invitation_model.venue_city = invitation.venue_city
                 invitation_model.venue_state = invitation.venue_state
                 invitation_model.venue_zip = invitation.venue_zip
-                invitation_model.venue_maps_url = invitation.venue_maps_url
+                invitation_model.venue_maps_url = _required(invitation.venue_maps_url, "venue_maps_url")
                 invitation_model.venue_name_gr = invitation.venue_name_gr
                 invitation_model.venue_address_gr = invitation.venue_address_gr
                 invitation_model.venue_city_gr = invitation.venue_city_gr
@@ -107,12 +114,12 @@ class InvitationRepository:
                     groom_name_gr=invitation.groom_name_gr,
                     wedding_date=invitation.wedding_date,
                     wedding_time=invitation.ceremony_time,
-                    church_name=invitation.church_name,
-                    church_address=invitation.church_address,
-                    church_city=invitation.church_city,
-                    church_state=invitation.church_state,
-                    church_zip=invitation.church_zip,
-                    church_maps_url=invitation.church_maps_url,
+                    church_name=_required(invitation.church_name, "church_name"),
+                    church_address=_required(invitation.church_address, "church_address"),
+                    church_city=_required(invitation.church_city, "church_city"),
+                    church_state=_required(invitation.church_state, "church_state"),
+                    church_zip=_required(invitation.church_zip, "church_zip"),
+                    church_maps_url=_required(invitation.church_maps_url, "church_maps_url"),
                     church_name_gr=invitation.church_name_gr,
                     church_address_gr=invitation.church_address_gr,
                     church_city_gr=invitation.church_city_gr,
@@ -121,7 +128,7 @@ class InvitationRepository:
                     venue_city=invitation.venue_city,
                     venue_state=invitation.venue_state,
                     venue_zip=invitation.venue_zip,
-                    venue_maps_url=invitation.venue_maps_url,
+                    venue_maps_url=_required(invitation.venue_maps_url, "venue_maps_url"),
                     venue_name_gr=invitation.venue_name_gr,
                     venue_address_gr=invitation.venue_address_gr,
                     venue_city_gr=invitation.venue_city_gr,

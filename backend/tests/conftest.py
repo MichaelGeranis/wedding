@@ -43,7 +43,7 @@ from wedding_api.utils.database import get_db  # noqa: E402
 
 
 @pytest_asyncio.fixture
-async def db_session() -> AsyncGenerator[AsyncSession, None]:
+async def db_session() -> AsyncGenerator[AsyncSession]:
     """Create a test database session with admin user."""
     engine = create_async_engine(os.getenv("DATABASE_URL"), echo=False)
 
@@ -67,7 +67,7 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest.fixture
-def client(db_session: AsyncSession) -> Generator[TestClient, None, None]:
+def client(db_session: AsyncSession) -> Generator[TestClient]:
     """Create a test client with database override."""
 
     def override_get_db():

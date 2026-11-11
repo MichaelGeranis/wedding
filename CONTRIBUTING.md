@@ -42,7 +42,7 @@ migrations and configuration is in [docs/development.md](docs/development.md).
    make test
    make lint-backend
    make lint-frontend
-   cd frontend && npm run build
+   cd frontend && npm test && npm run build
    ```
 4. Commit using [Conventional Commits](https://www.conventionalcommits.org/)
    (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).

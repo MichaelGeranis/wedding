@@ -85,7 +85,7 @@ export function WeatherWidget({ weddingDate, location }) {
       <div className="glass-card rounded-2xl p-6 text-center">
         <div className="animate-pulse">
           <div className="h-8 w-8 bg-charcoal/20 rounded-full mx-auto mb-2"></div>
-          <div className="h-4 w-32 bg-charcoal/20 rounded mx-auto"></div>
+          <div className="h-4 w-32 bg-charcoal/20 rounded-sm mx-auto"></div>
         </div>
       </div>
     )
@@ -116,7 +116,7 @@ export function WeatherWidget({ weddingDate, location }) {
       className="glass-card rounded-2xl p-6"
     >
       <div className="flex items-center gap-4">
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           {getWeatherIcon(weather.weatherCode)}
         </div>
 

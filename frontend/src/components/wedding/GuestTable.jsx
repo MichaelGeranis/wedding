@@ -104,7 +104,7 @@ export function GuestTable({ guests, onDelete }) {
                     ) : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <code className="text-xs bg-charcoal/10 px-2 py-1 rounded font-mono">
+                    <code className="text-xs bg-charcoal/10 px-2 py-1 rounded-sm font-mono">
                       {guest.confirmation_number}
                     </code>
                   </td>
@@ -154,12 +154,12 @@ export function GuestTable({ guests, onDelete }) {
 
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2 text-charcoal/70">
-                <Mail className="w-4 h-4 flex-shrink-0" />
+                <Mail className="w-4 h-4 shrink-0" />
                 <span className="truncate">{guest.email}</span>
               </div>
               {guest.phone && (
                 <div className="flex items-center gap-2 text-charcoal/70">
-                  <Phone className="w-4 h-4 flex-shrink-0" />
+                  <Phone className="w-4 h-4 shrink-0" />
                   <span>{guest.phone}</span>
                 </div>
               )}
@@ -175,18 +175,18 @@ export function GuestTable({ guests, onDelete }) {
               )}
               {guest.dietary_restrictions && (
                 <div className="flex items-start gap-2 text-charcoal/70">
-                  <UtensilsCrossed className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <UtensilsCrossed className="w-4 h-4 shrink-0 mt-0.5" />
                   <span>{guest.dietary_restrictions}</span>
                 </div>
               )}
               {guest.message && (
                 <div className="flex items-start gap-2 text-charcoal/70">
-                  <MessageSquare className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <MessageSquare className="w-4 h-4 shrink-0 mt-0.5" />
                   <span className="italic">{guest.message}</span>
                 </div>
               )}
               <div className="pt-2 border-t border-charcoal/10">
-                <code className="text-xs bg-charcoal/10 px-2 py-1 rounded font-mono">
+                <code className="text-xs bg-charcoal/10 px-2 py-1 rounded-sm font-mono">
                   {guest.confirmation_number}
                 </code>
               </div>

@@ -16,7 +16,6 @@ export function FloralDecor({ position = 'top' }) {
         viewBox="0 0 200 100"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className={isTop ? '' : 'rotate-180'}
         style={{ transform: 'translateZ(0)' }}
       >
         {/* Decorative leaves and vines */}

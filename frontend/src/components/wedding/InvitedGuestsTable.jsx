@@ -212,7 +212,7 @@ export function InvitedGuestsTable({ guests, onDelete, onEdit }) {
 
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2 text-charcoal/70">
-                <Phone className="w-4 h-4 flex-shrink-0" />
+                <Phone className="w-4 h-4 shrink-0" />
                 <span>{guest.phone}</span>
               </div>
               <div className="flex items-center gap-2 text-sm mt-2">
@@ -233,7 +233,7 @@ export function InvitedGuestsTable({ guests, onDelete, onEdit }) {
               </div>
               {guest.notes && (
                 <div className="flex items-start gap-2 text-charcoal/70">
-                  <StickyNote className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <StickyNote className="w-4 h-4 shrink-0 mt-0.5" />
                   <span>{guest.notes}</span>
                 </div>
               )}

@@ -49,13 +49,16 @@ uv run pytest tests/ -k "rsvp" -v
 
 ### Frontend checks
 
-The frontend has no unit tests yet. CI lints and builds it:
+CI lints the frontend, runs its unit tests and builds it:
 
 ```bash
 cd frontend
 npm run lint
+npm test          # Vitest, e.g. src/lib/validationSchemas.test.js
 npm run build
 ```
+
+Unit tests sit next to the code they test as `*.test.js` files.
 
 End-to-end scripts that drive a running stack are in
 [`frontend/test/e2e/`](../frontend/test/e2e/README.md).
@@ -71,14 +74,14 @@ This runs:
 - `ruff check --select I --fix` - Import sorting
 - `ruff check --fix` - Linting with auto-fix
 - `ruff format` - Code formatting
-- `mypy` - Type checking (it still reports existing errors, so CI does not run it yet)
+- `mypy` - Type checking (CI runs it too)
 
 **Frontend:**
 ```bash
 make lint-frontend
 ```
 
-This runs ESLint on the frontend code.
+This runs ESLint (flat config in `frontend/eslint.config.js`) on the frontend code.
 
 ## Database Migrations
 

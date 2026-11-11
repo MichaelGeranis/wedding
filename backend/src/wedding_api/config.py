@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     email_enabled: bool = Field(default=False, description="Enable email notifications")
 
     @model_validator(mode="after")
-    def _reject_demo_secret_outside_development(self) -> "Settings":
+    def _reject_demo_secret_outside_development(self) -> Settings:
         """The demo JWT secret in docker/demo.env is public: never accept it outside development."""
         if self.environment != "development" and self.jwt_secret_key.startswith("demo-"):
             raise ValueError("JWT_SECRET_KEY is the public demo value; set your own secret outside development")

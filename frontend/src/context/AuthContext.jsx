@@ -1,54 +1,28 @@
-import { createContext, useContext, useState, useEffect } from 'react'
-import PropTypes from 'prop-types'
+import { useState } from 'react'
+import { AuthContext } from './auth'
 
-const AuthContext = createContext(null)
-
-export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
-}
+const TOKEN_KEY = 'authToken'
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    // Check for existing token on mount
-    const storedToken = localStorage.getItem('authToken')
-    if (storedToken) {
-      setToken(storedToken)
-      setIsAuthenticated(true)
-    }
-    setIsLoading(false)
-  }, [])
+  // Read a stored token on first render, so there is no logged-out flash.
+  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
 
   const login = (authToken) => {
-    localStorage.setItem('authToken', authToken)
+    localStorage.setItem(TOKEN_KEY, authToken)
     setToken(authToken)
-    setIsAuthenticated(true)
   }
 
   const logout = () => {
-    localStorage.removeItem('authToken')
+    localStorage.removeItem(TOKEN_KEY)
     setToken(null)
-    setIsAuthenticated(false)
   }
 
   const value = {
     token,
-    isAuthenticated,
-    isLoading,
+    isAuthenticated: token !== null,
     login,
     logout,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-AuthProvider.propTypes = {
-  children: PropTypes.node.isRequired,
 }

@@ -47,7 +47,8 @@ uv run pytest tests/integration/test_api/test_rsvp_routes.py::test_submit_rsvp_s
 ### Linting & Formatting
 ```bash
 make lint-backend         # Runs ruff import sorting, ruff check --fix, ruff format, mypy
-make lint-frontend        # Runs npm lint
+make lint-frontend        # Runs npm lint (ESLint flat config)
+cd frontend && npm test   # Frontend unit tests (Vitest)
 ```
 
 ### Database Migrations
@@ -327,10 +328,11 @@ EMAIL_ENABLED=true
 - Integration tests use the actual test database
 - Fixtures provide database sessions and test data
 - Always test both success and error cases
+- Frontend unit tests use Vitest, as `*.test.js` files next to the code (`npm test`)
 
 ## Important Notes
 
-- **Python 3.13** is used - avoid deprecated `datetime.utcnow()`, use `datetime.now(timezone.utc)`
+- **Python 3.14** is used - avoid deprecated `datetime.utcnow()`, use `datetime.now(UTC)`
 - **Async/await everywhere** - all database operations are async
 - **UV for package management** - faster than pip, use `uv run` to execute commands
 - **Type hints required** - mypy is configured with `disallow_untyped_defs = true`
@@ -345,14 +347,14 @@ docker-compose up -d  # Starts postgres, backend, frontend
 ```
 
 Services:
-- `postgres` - PostgreSQL 16 on port 5432
+- `postgres` - PostgreSQL 18 on port 5432
 - `backend` - FastAPI on port 8000
 - `frontend` - React app on port 3000
 - `init-db` - Runs Alembic migrations on startup
 
 ## Frontend
 
-React 18 with Vite, located in `frontend/`:
+React 19 with Vite 8 and Tailwind CSS 4, located in `frontend/` (Node 26):
 - Uses Axios for API calls
 - AuthContext for authentication state
 - React Router for routing

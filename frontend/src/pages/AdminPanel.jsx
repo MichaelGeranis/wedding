@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { motion } from 'framer-motion'
 import { LogOut, Search, Filter, UserPlus } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/auth'
 import { adminAPI } from '../services/api'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -12,6 +12,8 @@ import { GuestStatsCards } from '../components/wedding/GuestStatsCards'
 import { GuestTable } from '../components/wedding/GuestTable'
 import { ExportButton } from '../components/ExportButton'
 import { useTranslation } from 'react-i18next'
+
+const PAGE_SIZE = 10
 
 function AdminPanel() {
   const { t } = useTranslation()
@@ -23,13 +25,17 @@ function AdminPanel() {
 
   const [guests, setGuests] = useState([])
   const [stats, setStats] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [loadedKey, setLoadedKey] = useState(null)
   const [error, setError] = useState(null)
 
   const [filter, setFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+
+  // The guest list is loading until the response for this page and filter arrives.
+  const requestKey = `${currentPage}:${filter}`
+  const loading = loadedKey !== requestKey
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -52,34 +58,6 @@ function AdminPanel() {
     }
   }
 
-  const fetchGuests = async () => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      const pageSize = 10
-      const params = {
-        limit: pageSize,
-        offset: (currentPage - 1) * pageSize,
-      }
-
-      if (filter === 'attending') {
-        params.attending = true
-      } else if (filter === 'not_attending') {
-        params.attending = false
-      }
-
-      const response = await adminAPI.getGuests(params)
-      setGuests(response.guests)
-      const totalPages = Math.ceil(response.total / pageSize)
-      setTotalPages(totalPages)
-    } catch (err) {
-      setError(err.message || 'Failed to load guests')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const fetchStats = async () => {
     try {
       const response = await adminAPI.getStats()
@@ -90,9 +68,43 @@ function AdminPanel() {
   }
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchGuests()
-      fetchStats()
+    if (!isAuthenticated) return
+    let ignore = false
+
+    const params = {
+      limit: PAGE_SIZE,
+      offset: (currentPage - 1) * PAGE_SIZE,
+    }
+    if (filter === 'attending') {
+      params.attending = true
+    } else if (filter === 'not_attending') {
+      params.attending = false
+    }
+
+    adminAPI
+      .getGuests(params)
+      .then((response) => {
+        if (ignore) return
+        setGuests(response.guests)
+        setTotalPages(Math.ceil(response.total / PAGE_SIZE))
+        setError(null)
+      })
+      .catch((err) => {
+        if (!ignore) setError(err.message || 'Failed to load guests')
+      })
+      .finally(() => {
+        if (!ignore) setLoadedKey(`${currentPage}:${filter}`)
+      })
+
+    adminAPI
+      .getStats()
+      .then((response) => {
+        if (!ignore) setStats(response)
+      })
+      .catch((err) => console.error('Failed to load stats:', err))
+
+    return () => {
+      ignore = true
     }
   }, [isAuthenticated, currentPage, filter])
 
@@ -144,7 +156,7 @@ function AdminPanel() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="glass-card rounded-3xl p-10 md:p-12 w-full max-w-md shadow-2xl"
+          className="glass-card rounded-3xl p-10 md:p-12 w-full max-w-md"
         >
           <h1 className="font-serif text-3xl md:text-4xl text-charcoal font-bold text-center mb-8">
             {t('admin.login_title')}
@@ -161,7 +173,7 @@ function AdminPanel() {
           )}
 
           <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
+            <div className="[&>*+*]:mt-2">
               <Label htmlFor="username">{t('admin.username')}</Label>
               <Input
                 type="text"
@@ -174,7 +186,7 @@ function AdminPanel() {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="[&>*+*]:mt-2">
               <Label htmlFor="password">{t('admin.password')}</Label>
               <Input
                 type="password"

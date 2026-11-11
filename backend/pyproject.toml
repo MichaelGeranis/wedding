@@ -2,37 +2,38 @@
 name = "wedding-api"
 version = "0.1.0"
 description = "Wedding RSVP API"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 
 dependencies = [
-    "fastapi>=0.104.0",
-    "uvicorn[standard]>=0.24.0",
-    "pydantic>=2.5.0",
-    "pydantic-settings>=2.1.0",
-    "pydantic[email]>=2.5.0",
-    "sqlalchemy>=2.0.0",
-    "asyncpg>=0.29.0",
-    "alembic>=1.13.0",
-    "python-jose[cryptography]>=3.3.0",
-    "passlib[bcrypt]>=1.7.4",
-    "python-multipart>=0.0.6",
-    "slowapi>=0.1.9",
-    "isort>=7.0.0",
-    "greenlet>=3.3.0",
-    "types-python-jose>=3.5.0.20250531",
-    "httpx>=0.25.0",
+    "fastapi>=0.162.4",
+    "uvicorn[standard]>=0.54.0",
+    "pydantic>=2.14.3",
+    "pydantic-settings>=2.16.2",
+    "pydantic[email]>=2.14.3",
+    "sqlalchemy>=2.1.8",
+    "asyncpg>=0.32.0",
+    "alembic>=1.20.1",
+    "python-jose[cryptography]>=3.5.0",
+    "bcrypt>=5.0.0",
+    "python-multipart>=0.0.33",
+    "slowapi>=0.1.10",
+    "isort>=9.0.2",
+    "greenlet>=3.5.6",
+    "types-python-jose>=3.5.0.20260408",
+    "httpx>=0.28.1",
     "qrcode[pil]>=8.2",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.4.0",
-    "pytest-cov>=4.1.0",
-    "pytest-asyncio>=0.21.0",
-    "httpx>=0.25.0",
-    "aiosqlite>=0.19.0",
-    "ruff>=0.1.0",
-    "mypy>=1.7.0",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "pytest-asyncio>=1.4.1",
+    "httpx>=0.28.1",
+    "aiosqlite>=0.22.1",
+    "ruff>=0.17.4",
+    "mypy>=2.4.1",
+    "types-qrcode>=8.2.0.20260518",
 ]
 
 [build-system]
@@ -48,27 +49,26 @@ python_files = "test_*.py"
 python_functions = "test_*"
 addopts = "-v --strict-markers"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
 line-length = 200
-target-version = "py311"
+target-version = "py314"
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
 ignore = []
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "tests/*" = ["F401", "F811"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 plugins = ["pydantic.mypy"]
-
-[[tool.mypy.overrides]]
-module = "moto.*"
-ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "slowapi.*"

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { motion, AnimatePresence } from 'framer-motion'
 import { UserPlus, Search, X, Users, ArrowLeft, Download, Upload } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/auth'
 import { invitedGuestsAPI } from '../services/api'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -15,7 +15,10 @@ function InvitedGuestsPage() {
   const { isAuthenticated } = useAuth()
   const [guests, setGuests] = useState([])
   const [stats, setStats] = useState(null)
-  const [loading, setLoading] = useState(false)
+  // Bumped to reload the list; the list is loading until that reload's response arrives.
+  const [reloadCount, setReloadCount] = useState(0)
+  const [loadedCount, setLoadedCount] = useState(null)
+  const loading = loadedCount !== reloadCount
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [isExporting, setIsExporting] = useState(false)
@@ -37,20 +40,6 @@ function InvitedGuestsPage() {
     rsvp_received: false,
   })
 
-  const fetchGuests = async () => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      const response = await invitedGuestsAPI.getInvitedGuests()
-      setGuests(response.guests)
-    } catch (err) {
-      setError(err.message || 'Failed to load invited guests')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const fetchStats = async () => {
     try {
       const response = await invitedGuestsAPI.getInvitedGuestsStats()
@@ -61,11 +50,34 @@ function InvitedGuestsPage() {
   }
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchGuests()
-      fetchStats()
+    if (!isAuthenticated) return
+    let ignore = false
+
+    invitedGuestsAPI
+      .getInvitedGuests()
+      .then((response) => {
+        if (ignore) return
+        setGuests(response.guests)
+        setError(null)
+      })
+      .catch((err) => {
+        if (!ignore) setError(err.message || 'Failed to load invited guests')
+      })
+      .finally(() => {
+        if (!ignore) setLoadedCount(reloadCount)
+      })
+
+    invitedGuestsAPI
+      .getInvitedGuestsStats()
+      .then((response) => {
+        if (!ignore) setStats(response)
+      })
+      .catch((err) => console.error('Failed to load stats:', err))
+
+    return () => {
+      ignore = true
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, reloadCount])
 
   const resetForm = () => {
     setFormData({ name: '', phone: '', notes: '' })
@@ -167,8 +179,7 @@ function InvitedGuestsPage() {
 
       // Refresh the guest list and stats if any imports were successful
       if (result.success_count > 0) {
-        fetchGuests()
-        fetchStats()
+        setReloadCount((count) => count + 1)
       }
     } catch (error) {
       console.error('Import failed:', error)
@@ -207,7 +218,7 @@ function InvitedGuestsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="glass-card rounded-3xl p-10 md:p-12 w-full max-w-md shadow-2xl text-center"
+          className="glass-card rounded-3xl p-10 md:p-12 w-full max-w-md text-center"
         >
           <h1 className="font-serif text-3xl md:text-4xl text-charcoal font-bold mb-4">
             {t('invited_guests.access_denied')}
@@ -228,7 +239,7 @@ function InvitedGuestsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="space-y-4"
+          className="[&>*+*]:mt-4"
         >
           <Link
             to="/admin"
@@ -378,14 +389,14 @@ function InvitedGuestsPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-charcoal/50 flex items-center justify-center z-50 p-6"
+              className="fixed inset-0 m-0 bg-charcoal/50 flex items-center justify-center z-50 p-6"
               onClick={(e) => e.target === e.currentTarget && resetForm()}
             >
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="glass-card rounded-3xl p-8 w-full max-w-lg shadow-2xl"
+                className="glass-card rounded-3xl p-8 w-full max-w-lg"
               >
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="font-serif text-2xl text-charcoal font-bold">
@@ -410,7 +421,7 @@ function InvitedGuestsPage() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-                  <div className="space-y-2">
+                  <div className="[&>*+*]:mt-2">
                     <Label htmlFor="name">{t('invited_guests.guest_name')} *</Label>
                     <Input
                       id="name"
@@ -423,7 +434,7 @@ function InvitedGuestsPage() {
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="[&>*+*]:mt-2">
                     <Label htmlFor="phone">{t('invited_guests.phone')} *</Label>
                     <Input
                       id="phone"
@@ -440,7 +451,7 @@ function InvitedGuestsPage() {
                     </p>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="[&>*+*]:mt-2">
                     <Label htmlFor="notes">{t('invited_guests.notes')}</Label>
                     <Textarea
                       id="notes"
@@ -512,14 +523,14 @@ function InvitedGuestsPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-charcoal/50 flex items-center justify-center z-50 p-6"
+              className="fixed inset-0 m-0 bg-charcoal/50 flex items-center justify-center z-50 p-6"
               onClick={(e) => e.target === e.currentTarget && setShowImportResult(false)}
             >
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="glass-card rounded-3xl p-8 w-full max-w-lg shadow-2xl"
+                className="glass-card rounded-3xl p-8 w-full max-w-lg"
               >
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="font-serif text-2xl text-charcoal font-bold">

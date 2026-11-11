@@ -47,7 +47,7 @@ export function CountdownTimer({ targetDate }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: index * 0.1 }}
-          className="glass-card rounded-2xl p-6 md:p-8 min-w-[100px] md:min-w-[120px] shadow-xl shadow-charcoal/10"
+          className="glass-card rounded-2xl p-6 md:p-8 min-w-[100px] md:min-w-[120px]"
         >
           <div className="text-4xl md:text-5xl font-serif font-bold text-rose-dark text-center">
             {String(block.value).padStart(2, '0')}

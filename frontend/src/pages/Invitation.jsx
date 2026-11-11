@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Calendar, Clock, MapPin, Send, TicketsPlane, CalendarPlus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -166,7 +166,7 @@ function Invitation() {
           {/* Invitation Text */}
           <motion.p
             {...getAnimationProps({ opacity: 0 }, 1)}
-            className="text-charcoal/80 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed"
+            className="text-charcoal/80 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed md:leading-7"
           >
             {t('invitation.request_pleasure')} {t('invitation.at_their_wedding')}
           </motion.p>
@@ -174,12 +174,12 @@ function Invitation() {
           {/* Wedding Details */}
           <motion.div
             {...getAnimationProps({ opacity: 0, y: 20 }, 1.4)}
-            className="glass-card rounded-3xl p-8 md:p-10 shadow-2xl"
+            className="glass-card rounded-3xl p-8 md:p-10"
           >
             <div className="max-w-md mx-auto space-y-6">
               {weddingDate && (
                 <div className="flex items-center gap-4 text-charcoal">
-                  <Calendar className="w-6 h-6 text-sage flex-shrink-0" />
+                  <Calendar className="w-6 h-6 text-sage shrink-0" />
                   <div className="flex-1">
                     <p className="text-sm uppercase tracking-wider text-charcoal/60 mb-1">
                       {t('invitation.date')}
@@ -198,7 +198,7 @@ function Invitation() {
 
               {invitation?.ceremony_time && (
                 <div className="flex items-center gap-4 text-charcoal">
-                  <Clock className="w-6 h-6 text-sage flex-shrink-0" />
+                  <Clock className="w-6 h-6 text-sage shrink-0" />
                   <div className="flex-1">
                     <p className="text-sm uppercase tracking-wider text-charcoal/60 mb-1">
                       {t('invitation.time')}
@@ -217,7 +217,7 @@ function Invitation() {
                   rel="noopener noreferrer"
                   className="flex items-center gap-4 text-charcoal hover:text-sage transition-colors group"
                 >
-                  <MapPin className="w-6 h-6 text-sage flex-shrink-0 group-hover:text-rose-light" />
+                  <MapPin className="w-6 h-6 text-sage shrink-0 group-hover:text-rose-light" />
                   <div className="flex-1">
                     <p className="text-sm uppercase tracking-wider text-charcoal/60 mb-1">{t('invitation.ceremony')}</p>
                     <p className="text-lg md:text-xl font-medium underline decoration-blue-400/50 group-hover:decoration-blue-600 underline-offset-2">
@@ -239,7 +239,7 @@ function Invitation() {
                   rel="noopener noreferrer"
                   className="flex items-center gap-4 text-charcoal hover:text-sage transition-colors group"
                 >
-                  <MapPin className="ww-6 h-6 text-sage flex-shrink-0 group-hover:text-rose-light" />
+                  <MapPin className="ww-6 h-6 text-sage shrink-0 group-hover:text-rose-light" />
                   <div className="flex-1">
                     <p className="text-sm uppercase tracking-wider text-charcoal/60 mb-1">{t('invitation.reception')}</p>
                     <p className="text-lg md:text-xl font-medium underline decoration-blue-400/50 group-hover:decoration-blue-600 underline-offset-2">
@@ -302,7 +302,7 @@ function Invitation() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: shouldReduceMotion ? 0 : 0.6 }}
-            className="glass-card rounded-3xl p-10 md:p-12 space-y-6 shadow-2xl"
+            className="glass-card rounded-3xl p-10 md:p-12 [&>*+*]:mt-6"
           >
             <TicketsPlane className="w-12 h-12 md:w-16 md:h-16 text-rose-dark fill-rose-dark/30 mx-auto animate-float" />
 
@@ -310,7 +310,7 @@ function Invitation() {
               {t('invitation.will_you_join')}
             </h2>
 
-            <p className="text-charcoal/70 text-base md:text-lg leading-relaxed max-w-xl mx-auto">
+            <p className="text-charcoal/70 text-base md:text-lg leading-relaxed md:leading-7 max-w-xl mx-auto">
               {t('invitation.let_us_know')}
             </p>
 
