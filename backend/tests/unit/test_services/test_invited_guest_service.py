@@ -1,7 +1,7 @@
 """Unit tests for InvitedGuestService."""
 
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 
@@ -16,7 +16,7 @@ class FakeRepo:
         self._next_id = 1
 
     async def create_invited_guest(self, guest_data: InvitedGuestCreate) -> InvitedGuestResponse:
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         obj = InvitedGuestResponse(
             id=self._next_id,
             name=guest_data.name,
@@ -64,7 +64,7 @@ class FakeRepo:
             existing.invitation_sent = guest_data.invitation_sent
         if guest_data.rsvp_received is not None:
             existing.rsvp_received = guest_data.rsvp_received
-        existing.updated_at = datetime.utcnow()
+        existing.updated_at = datetime.now(UTC)
         return existing
 
     async def delete_invited_guest(self, guest_id: int) -> bool:

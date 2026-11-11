@@ -32,7 +32,7 @@ class RSVPRepository:
             confirmation_number: str = self._generate_confirmation_number()
             now: datetime = datetime.now(UTC)
 
-            email_norm = rsvp.email.lower().strip() if getattr(rsvp, "email", None) else None
+            email_norm = rsvp.email.lower().strip() if rsvp.email else None
 
             phone_val = None
             if getattr(rsvp, "phone", None):

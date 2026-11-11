@@ -1,7 +1,7 @@
 """Unit tests for RSVPService."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
@@ -29,7 +29,7 @@ class FakeRSVPRepo:
             plus_one=rsvp_data.plus_one,
             message=rsvp_data.message,
             confirmation_number=f"CONF-{len(self._store) + 1:06d}",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
             updated_at=None,
         )
         self._store[str(resp.id)] = resp
