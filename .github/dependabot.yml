@@ -1,32 +1,45 @@
-# Weekly update PRs for every package ecosystem in the repository.
+# Weekly update PRs, grouped so each ecosystem opens at most one PR a week
+# (security updates still arrive individually, as soon as they are published).
 version: 2
 updates:
   - package-ecosystem: pip
     directory: /backend
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    groups:
+      pip:
+        patterns: ["*"]
 
   - package-ecosystem: npm
     directory: /frontend
     schedule:
       interval: weekly
     groups:
-      react:
-        patterns: ["react", "react-dom", "@types/react*"]
-    open-pull-requests-limit: 5
+      npm:
+        patterns: ["*"]
 
   - package-ecosystem: docker
-    directory: /backend
+    directories:
+      - /backend
+      - /frontend
     schedule:
       interval: weekly
+    groups:
+      docker:
+        patterns: ["*"]
 
-  - package-ecosystem: docker
-    directory: /frontend
+  - package-ecosystem: docker-compose
+    directory: /
     schedule:
       interval: weekly
+    groups:
+      docker-compose:
+        patterns: ["*"]
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
