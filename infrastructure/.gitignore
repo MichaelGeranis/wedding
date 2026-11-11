@@ -1,0 +1,15 @@
+# Secrets and configuration
+parameters.json
+*.pem
+*.key
+
+# AWS
+.aws/
+
+# Terraform (if used in future)
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# Logs
+*.log

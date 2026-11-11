@@ -1,0 +1,95 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wedding-postgres
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - wedding-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wedding"]
+      interval: 60s
+      timeout: 5s
+      retries: 2
+    env_file:
+      - docker/demo.env
+      - path: backend/.env
+        required: false
+
+  init-db:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: wedding-init-db
+    env_file:
+      - docker/demo.env
+      - path: backend/.env
+        required: false
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://wedding:wedding@postgres:5432/wedding
+    networks:
+      - wedding-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: python /app/scripts/init_db.py
+    restart: "no"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: wedding-backend
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - docker/demo.env
+      - path: backend/.env
+        required: false
+    environment:
+      # Override DATABASE_URL for Docker networking
+      - DATABASE_URL=postgresql+asyncpg://wedding:wedding@postgres:5432/wedding
+    networks:
+      - wedding-network
+    depends_on:
+      init-db:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8000/api
+    container_name: wedding-frontend
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - path: frontend/.env
+        required: false
+    networks:
+      - wedding-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+networks:
+  wedding-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

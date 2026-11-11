@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Test files
+tests/
+*.test.py
+
+# Development
+.env
+.env.*
+!.env.example
+
+# Scripts
+scripts/generate_secrets.py
+scripts/backup_database.sh
+scripts/restore_database.sh
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+Dockerfile
+.dockerignore

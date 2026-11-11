@@ -1,0 +1,676 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Wedding Application Infrastructure - Cost-Optimized ECS + RDS Deployment'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues:
+      - development
+      - staging
+      - production
+    Description: Environment name
+
+  RequireInvitedGuestValidation:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Require invited guest validation for RSVPs
+
+  # Database Parameters
+  DBUsername:
+    Type: String
+    Default: wedding
+    Description: Database username
+    MinLength: 1
+    MaxLength: 16
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: Database password (min 8 characters)
+    MinLength: 8
+    MaxLength: 41
+
+  # Application Parameters
+  JWTSecretKey:
+    Type: String
+    NoEcho: true
+    Description: JWT secret key (min 32 characters)
+    MinLength: 32
+
+  AdminPasswordHash:
+    Type: String
+    NoEcho: true
+    Description: Bcrypt hash of admin password
+
+  # Domain (optional - leave empty if not using custom domain)
+  DomainName:
+    Type: String
+    Default: ''
+    Description: Custom domain name (optional, e.g., wedding.example.com)
+
+  # Docker Images (optional - will use ECR if not provided)
+  BackendImage:
+    Type: String
+    Default: ''
+    Description: Backend Docker image (leave empty to use ECR repository created by this stack)
+
+  FrontendImage:
+    Type: String
+    Default: ''
+    Description: Frontend Docker image (leave empty to use ECR repository created by this stack)
+
+  # Email Enabled
+  EmailEnabled:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Enable email sending functionality
+
+  SMTPUsername:
+    Type: String
+    Default: ''
+    Description: SMTP username (required if EmailEnabled is true)
+
+  SMTPPassword:
+    Type: String
+    Default: ''
+    NoEcho: true
+    Description: SMTP password (required if EmailEnabled is true)
+
+  EmailFromAddress:
+    Type: String
+    Default: ''
+    Description: Email "From" address (required if EmailEnabled is true)
+
+Conditions:
+  HasDomain: !Not [!Equals [!Ref DomainName, '']]
+  UseCustomBackendImage: !Not [!Equals [!Ref BackendImage, '']]
+  UseCustomFrontendImage: !Not [!Equals [!Ref FrontendImage, '']]
+
+Resources:
+  # ========================================
+  # VPC and Networking
+  # ========================================
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-vpc'
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-igw'
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # Public Subnets (2 for high availability, required by ALB)
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-subnet-1'
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-subnet-2'
+
+  # Route Table
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-rt'
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  # ========================================
+  # Security Groups
+  # ========================================
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Application Load Balancer
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-alb-sg'
+
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for ECS tasks
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-ecs-sg'
+
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS PostgreSQL
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref ECSSecurityGroup
+        # TEMPORARY: Allow public access for DBeaver - REMOVE AFTER USE
+        # - IpProtocol: tcp
+        #   FromPort: 5432
+        #   ToPort: 5432
+        #   CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-rds-sg'
+
+  # ========================================
+  # RDS PostgreSQL Database
+  # ========================================
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for RDS
+      SubnetIds:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-db-subnet-group'
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    Properties:
+      DBInstanceIdentifier: !Sub '${AWS::StackName}-db'
+      Engine: postgres
+      EngineVersion: '16.3'
+      DBInstanceClass: db.t4g.micro  # Smallest ARM-based instance (~$13/month)
+      AllocatedStorage: 20  # Minimum 20GB
+      StorageType: gp3  # Cheaper than gp2
+      DBName: wedding
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      PubliclyAccessible: false
+      # TEMPORARY: Allow public access for DBeaver - REMOVE AFTER USE
+      # PubliclyAccessible: true
+      MultiAZ: false  # Single AZ for cost savings
+      BackupRetentionPeriod: 0  # No automated backups (free tier limitation)
+      PreferredMaintenanceWindow: 'sun:04:00-sun:05:00'
+      EnableCloudwatchLogsExports:
+        - postgresql
+      DeletionProtection: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-database'
+
+  # ========================================
+  # Application Load Balancer
+  # ========================================
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub '${AWS::StackName}-alb'
+      Type: application
+      Scheme: internet-facing
+      IpAddressType: ipv4
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-alb'
+
+  # Target Groups
+  BackendTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${AWS::StackName}-backend-tg'
+      Port: 8000
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      TargetType: ip
+      HealthCheckEnabled: true
+      HealthCheckPath: /api/health
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: 200
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-backend-tg'
+
+  FrontendTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${AWS::StackName}-frontend-tg'
+      Port: 3000
+      Protocol: HTTP
+      VpcId: !Ref VPC
+      TargetType: ip
+      HealthCheckEnabled: true
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      Matcher:
+        HttpCode: 200
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-frontend-tg'
+
+  # HTTP Listener (redirects to HTTPS if domain is configured)
+  HTTPListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref FrontendTargetGroup
+
+  # Listener Rules
+  BackendListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref HTTPListener
+      Priority: 1
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - /api/*
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref BackendTargetGroup
+
+  # ========================================
+  # ECS Cluster
+  # ========================================
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub '${AWS::StackName}-cluster'
+      ClusterSettings:
+        - Name: containerInsights
+          Value: disabled  # Disable to save costs
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-cluster'
+
+  # ========================================
+  # IAM Roles
+  # ========================================
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: SSMParameterAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameters
+                  - ssm:GetParameter
+                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${AWS::StackName}/*'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-ecs-execution-role'
+
+  ECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-ecs-task-role'
+
+  # ========================================
+  # SSM Parameters (for secrets)
+  # ========================================
+  DBPasswordParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/${AWS::StackName}/db-password'
+      Type: String
+      Value: !Ref DBPassword
+      Description: Database password
+
+  JWTSecretParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/${AWS::StackName}/jwt-secret'
+      Type: String
+      Value: !Ref JWTSecretKey
+      Description: JWT secret key
+
+  AdminPasswordHashParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/${AWS::StackName}/admin-password-hash'
+      Type: String
+      Value: !Ref AdminPasswordHash
+      Description: Admin password hash
+
+  # ========================================
+  # CloudWatch Log Groups
+  # ========================================
+  BackendLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ecs/${AWS::StackName}/backend'
+      RetentionInDays: 7  # Keep logs for 7 days to reduce costs
+
+  FrontendLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ecs/${AWS::StackName}/frontend'
+      RetentionInDays: 7
+
+  # ========================================
+  # ECS Task Definitions
+  # ========================================
+  BackendTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub '${AWS::StackName}-backend'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: '256'  # 0.25 vCPU (smallest)
+      Memory: '512'  # 512 MB (smallest)
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt ECSTaskRole.Arn
+      ContainerDefinitions:
+        - Name: backend
+          Image: !If
+            - UseCustomBackendImage
+            - !Ref BackendImage
+            - !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${AWS::StackName}-backend:latest'
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8000
+              Protocol: tcp
+          Environment:
+            - Name: ENVIRONMENT
+              Value: !Ref Environment
+            - Name: DATABASE_URL
+              Value: !Sub 'postgresql+asyncpg://${DBUsername}:${DBPassword}@${Database.Endpoint.Address}:5432/wedding'
+            - Name: FRONTEND_URL
+              Value: !If
+                - HasDomain
+                - !Sub 'https://${DomainName}'
+                - !Sub 'http://${ApplicationLoadBalancer.DNSName}'
+            - Name: CORS_ORIGINS
+              Value: !If
+                - HasDomain
+                - !Sub 'https://${DomainName}'
+                - !Sub 'http://${ApplicationLoadBalancer.DNSName}'
+            - Name: API_PORT
+              Value: '8000'
+            - Name: LOG_LEVEL
+              Value: INFO
+            - Name: JWT_ALGORITHM
+              Value: HS256
+            - Name: JWT_EXPIRATION_MINUTES
+              Value: '60'
+            - Name: RATE_LIMIT_RSVP
+              Value: '10/day'
+            - Name: RATE_LIMIT_ADMIN_LOGIN
+              Value: '5/minute'
+            - Name: EMAIL_ENABLED
+              Value: !Ref EmailEnabled
+            - Name: SMTP_USERNAME
+              Value: !Ref SMTPUsername
+            - Name: SMTP_PASSWORD
+              Value: !Ref SMTPPassword
+            - Name: EMAIL_FROM_ADDRESS
+              Value: !Ref EmailFromAddress
+            - Name: REQUIRE_INVITED_GUEST_VALIDATION
+              Value: 'false'
+            - Name: JWT_SECRET_KEY
+              Value: !Ref JWTSecretKey
+            - Name: ADMIN_PASSWORD_HASH
+              Value: !Ref AdminPasswordHash
+            - Name: REQUIRE_INVITED_GUEST_VALIDATION
+              Value: !Ref RequireInvitedGuestValidation
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref BackendLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: backend
+
+  FrontendTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub '${AWS::StackName}-frontend'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: '256'  # 0.25 vCPU (smallest)
+      Memory: '512'  # 512 MB (smallest)
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt ECSTaskRole.Arn
+      ContainerDefinitions:
+        - Name: frontend
+          Image: !If
+            - UseCustomFrontendImage
+            - !Ref FrontendImage
+            - !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${AWS::StackName}-frontend:latest'
+          Essential: true
+          PortMappings:
+            - ContainerPort: 3000
+              Protocol: tcp
+          Environment:
+            - Name: VITE_API_URL
+              Value: !Sub 'http://${ApplicationLoadBalancer.DNSName}/api'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref FrontendLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: frontend
+
+  # ========================================
+  # ECS Services
+  # ========================================
+  BackendService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - HTTPListener
+      - BackendListenerRule
+    Properties:
+      ServiceName: !Sub '${AWS::StackName}-backend'
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref BackendTaskDefinition
+      DesiredCount: 1  # Single instance for cost savings
+      LaunchType: FARGATE
+      PlatformVersion: LATEST
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref PublicSubnet1
+            - !Ref PublicSubnet2
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+      LoadBalancers:
+        - ContainerName: backend
+          ContainerPort: 8000
+          TargetGroupArn: !Ref BackendTargetGroup
+      HealthCheckGracePeriodSeconds: 60
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-backend-service'
+
+  FrontendService:
+    Type: AWS::ECS::Service
+    DependsOn: HTTPListener
+    Properties:
+      ServiceName: !Sub '${AWS::StackName}-frontend'
+      Cluster: !Ref ECSCluster
+      TaskDefinition: !Ref FrontendTaskDefinition
+      DesiredCount: 1  # Single instance for cost savings
+      LaunchType: FARGATE
+      PlatformVersion: LATEST
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref PublicSubnet1
+            - !Ref PublicSubnet2
+          SecurityGroups:
+            - !Ref ECSSecurityGroup
+      LoadBalancers:
+        - ContainerName: frontend
+          ContainerPort: 3000
+          TargetGroupArn: !Ref FrontendTargetGroup
+      HealthCheckGracePeriodSeconds: 60
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-frontend-service'
+
+Outputs:
+  LoadBalancerURL:
+    Description: Application Load Balancer URL
+    Value: !Sub 'http://${ApplicationLoadBalancer.DNSName}'
+    Export:
+      Name: !Sub '${AWS::StackName}-alb-url'
+
+  DatabaseEndpoint:
+    Description: RDS PostgreSQL endpoint
+    Value: !GetAtt Database.Endpoint.Address
+    Export:
+      Name: !Sub '${AWS::StackName}-db-endpoint'
+
+  DatabasePort:
+    Description: RDS PostgreSQL port
+    Value: !GetAtt Database.Endpoint.Port
+    Export:
+      Name: !Sub '${AWS::StackName}-db-port'
+
+  VPCId:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-vpc-id'
+
+  ECSClusterName:
+    Description: ECS Cluster name
+    Value: !Ref ECSCluster
+    Export:
+      Name: !Sub '${AWS::StackName}-cluster-name'
+
+  BackendECRRepositoryUri:
+    Description: Backend ECR Repository URI
+    Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${AWS::StackName}-backend'
+    Export:
+      Name: !Sub '${AWS::StackName}-backend-ecr-uri'
+
+  FrontendECRRepositoryUri:
+    Description: Frontend ECR Repository URI
+    Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${AWS::StackName}-frontend'
+    Export:
+      Name: !Sub '${AWS::StackName}-frontend-ecr-uri'
+
+  EstimatedMonthlyCost:
+    Description: Estimated monthly cost (USD)
+    Value: |
+      RDS db.t4g.micro: ~$13
+      ECS Fargate (2 tasks x 0.25 vCPU, 0.5 GB): ~$10
+      Application Load Balancer: ~$16
+      Data Transfer: ~$5
+      Total: ~$44/month

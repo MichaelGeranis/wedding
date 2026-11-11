@@ -1,0 +1,34 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "production"
+  },
+  {
+    "ParameterKey": "DBUsername",
+    "ParameterValue": "wedding"
+  },
+  {
+    "ParameterKey": "DBPassword",
+    "ParameterValue": "CHANGE_ME_SECURE_PASSWORD_MIN_8_CHARS"
+  },
+  {
+    "ParameterKey": "JWTSecretKey",
+    "ParameterValue": "CHANGE_ME_RUN_generate_secrets_py_TO_GET_THIS"
+  },
+  {
+    "ParameterKey": "AdminPasswordHash",
+    "ParameterValue": "CHANGE_ME_RUN_generate_secrets_py_TO_GET_THIS"
+  },
+  {
+    "ParameterKey": "BackendImage",
+    "ParameterValue": "your-dockerhub-username/wedding-backend:latest"
+  },
+  {
+    "ParameterKey": "FrontendImage",
+    "ParameterValue": "your-dockerhub-username/wedding-frontend:latest"
+  },
+  {
+    "ParameterKey": "DomainName",
+    "ParameterValue": ""
+  }
+]
