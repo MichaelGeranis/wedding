@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine as build
+FROM node:25-alpine as build
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 
 # Production stage
-FROM node:20-alpine
+FROM node:25-alpine
 
 WORKDIR /app
 
