@@ -1,5 +1,5 @@
 # Multi-stage build for smaller image size
-FROM python:3.13-slim as builder
+FROM python:3.14-slim AS builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -17,13 +17,13 @@ WORKDIR /app
 # Copy dependency files
 COPY pyproject.toml .
 
-# Install dependencies only (not the package itself yet)
-RUN uv pip install --system fastapi uvicorn[standard] pydantic pydantic-settings pydantic[email] \
-    sqlalchemy asyncpg alembic python-jose[cryptography] passlib[bcrypt] python-multipart \
-    slowapi isort greenlet types-python-jose httpx qrcode[pil]
+# Install the runtime dependencies declared in pyproject.toml (not the package
+# itself, which runs from /app/src) into a virtualenv copied to the final stage.
+RUN uv venv /opt/venv \
+    && uv pip install --python /opt/venv --no-cache -r pyproject.toml
 
 # Production stage
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
@@ -38,8 +38,8 @@ RUN useradd -m -u 1000 appuser
 WORKDIR /app
 
 # Copy installed packages from builder
-COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH=/opt/venv/bin:$PATH
 
 # Copy application code
 COPY . .
