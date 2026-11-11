@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Calendar, Clock, MapPin, Send, TicketsPlane, CalendarPlus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -179,7 +179,7 @@ function Invitation() {
             <div className="max-w-md mx-auto space-y-6">
               {weddingDate && (
                 <div className="flex items-center gap-4 text-charcoal">
-                  <Calendar className="w-6 h-6 text-sage flex-shrink-0" />
+                  <Calendar className="w-6 h-6 text-sage shrink-0" />
                   <div className="flex-1">
                     <p className="text-sm uppercase tracking-wider text-charcoal/60 mb-1">
                       {t('invitation.date')}
@@ -198,7 +198,7 @@ function Invitation() {
 
               {invitation?.ceremony_time && (
                 <div className="flex items-center gap-4 text-charcoal">
-                  <Clock className="w-6 h-6 text-sage flex-shrink-0" />
+                  <Clock className="w-6 h-6 text-sage shrink-0" />
                   <div className="flex-1">
                     <p className="text-sm uppercase tracking-wider text-charcoal/60 mb-1">
                       {t('invitation.time')}
@@ -217,7 +217,7 @@ function Invitation() {
                   rel="noopener noreferrer"
                   className="flex items-center gap-4 text-charcoal hover:text-sage transition-colors group"
                 >
-                  <MapPin className="w-6 h-6 text-sage flex-shrink-0 group-hover:text-rose-light" />
+                  <MapPin className="w-6 h-6 text-sage shrink-0 group-hover:text-rose-light" />
                   <div className="flex-1">
                     <p className="text-sm uppercase tracking-wider text-charcoal/60 mb-1">{t('invitation.ceremony')}</p>
                     <p className="text-lg md:text-xl font-medium underline decoration-blue-400/50 group-hover:decoration-blue-600 underline-offset-2">
@@ -239,7 +239,7 @@ function Invitation() {
                   rel="noopener noreferrer"
                   className="flex items-center gap-4 text-charcoal hover:text-sage transition-colors group"
                 >
-                  <MapPin className="ww-6 h-6 text-sage flex-shrink-0 group-hover:text-rose-light" />
+                  <MapPin className="ww-6 h-6 text-sage shrink-0 group-hover:text-rose-light" />
                   <div className="flex-1">
                     <p className="text-sm uppercase tracking-wider text-charcoal/60 mb-1">{t('invitation.reception')}</p>
                     <p className="text-lg md:text-xl font-medium underline decoration-blue-400/50 group-hover:decoration-blue-600 underline-offset-2">

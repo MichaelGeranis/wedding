@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useSearchParams, useLocation } from 'react-router-dom'
+import { useSearchParams } from 'react-router'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Heart, Send, CheckCircle2, Banana, Music, Hamburger, Martini } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -38,7 +38,6 @@ const COUNTRY_CODES = [
 function RSVPForm() {
   const { t, i18n } = useTranslation()
   const [searchParams] = useSearchParams()
-  const location = useLocation()
   const [submitted, setSubmitted] = useState(false)
   const [confirmationNumber, setConfirmationNumber] = useState('')
   const [apiError, setApiError] = useState(null)
@@ -47,7 +46,7 @@ function RSVPForm() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm({
@@ -65,7 +64,7 @@ function RSVPForm() {
     },
   })
 
-  const attending = watch('attending')
+  const attending = useWatch({ control, name: 'attending' })
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -138,7 +137,7 @@ function RSVPForm() {
       }
     }
 
-    fetchGuestInfo(), location
+    fetchGuestInfo()
   }, [searchParams, setValue])
 
   const onSubmit = async (data) => {
@@ -302,7 +301,7 @@ function RSVPForm() {
                   <Select
                     id="country_code"
                     {...register('country_code')}
-                    className="w-32 flex-shrink-0"
+                    className="w-32 shrink-0"
                   >
                     {COUNTRY_CODES.map((item) => (
                       <option key={item.code} value={item.code}>
@@ -408,7 +407,7 @@ function RSVPForm() {
                         type="checkbox"
                         id="plus_one"
                         {...register('plus_one')}
-                        className="h-5 w-5 rounded border-2 border-charcoal/30 text-sage focus:ring-2 focus:ring-sage focus:ring-offset-2"
+                        className="h-5 w-5 rounded-sm border-2 border-charcoal/30 text-sage focus:ring-2 focus:ring-sage focus:ring-offset-2"
                       />
                       <Label htmlFor="plus_one" className="cursor-pointer">
                         {t('rsvp.yes_plus_one')}

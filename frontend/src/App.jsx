@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router'
 import { AuthProvider } from './context/AuthContext'
 import { WeddingNav } from './components/wedding/WeddingNav'
 import Invitation from './pages/Invitation'
