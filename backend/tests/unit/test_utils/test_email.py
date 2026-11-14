@@ -196,7 +196,6 @@ async def test_send_admin_notification():
 
         result = await service.send_admin_notification(
             guest_name="John Doe",
-            guest_email="guest@example.com",
             attending=True,
             rsvp_details={
                 "plus_one": True,
@@ -219,7 +218,6 @@ async def test_send_admin_notification_no_admin_email():
 
         result = await service.send_admin_notification(
             guest_name="John Doe",
-            guest_email="guest@example.com",
             attending=True,
             rsvp_details={},
         )
@@ -298,14 +296,14 @@ def test_generate_rsvp_confirmation_text_minimal(email_service):
     assert "Status: Not Attending" in text
 
 
-def test_generate_admin_notification_html(email_service):
-    """Test generating admin notification HTML."""
+def test_generate_admin_notification_html_whenguestgavedetails_shouldleavethemout(email_service):
+    """The admin notice names the guest and the head count, and nothing that belongs only in the admin panel."""
     html = email_service._generate_admin_notification_html(
         guest_name="John Doe",
-        guest_email="john@example.com",
         attending=True,
         rsvp_details={
             "plus_one": True,
+            "children_count": 2,
             "dietary_restrictions": "Vegan",
             "message": "Excited!",
             "phone": "+1234567890",
@@ -313,29 +311,27 @@ def test_generate_admin_notification_html(email_service):
     )
 
     assert "John Doe" in html
-    assert "john@example.com" in html
     assert "ATTENDING" in html
-    assert "Plus One" in html or "Yes" in html
-    assert "Vegan" in html
-    assert "Excited!" in html
-    assert "+1234567890" in html
+    assert "Plus One: Yes" in html
+    assert "Children: 2" in html
+    assert "/admin" in html
+    for private in ("Vegan", "Excited!", "+1234567890"):
+        assert private not in html
 
 
-def test_generate_admin_notification_text(email_service):
-    """Test generating admin notification text."""
+def test_generate_admin_notification_text_whenguestgavedetails_shouldleavethemout(email_service):
+    """The plain-text notice carries the same minimal summary."""
     text = email_service._generate_admin_notification_text(
         guest_name="John Doe",
-        guest_email="john@example.com",
         attending=False,
-        rsvp_details={
-            "phone": "+0987654321",
-        },
+        rsvp_details={"phone": "+0987654321", "dietary_restrictions": "Vegan", "plus_one": True},
     )
 
     assert "John Doe" in text
-    assert "john@example.com" in text
     assert "NOT ATTENDING" in text
-    assert "+0987654321" in text
+    assert "Plus One" not in text  # head count is only shown for guests who are coming
+    assert "+0987654321" not in text
+    assert "Vegan" not in text
 
 
 # Note: XSS protection test removed - Pydantic validators prevent malicious input

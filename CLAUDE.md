@@ -115,7 +115,8 @@ Database (PostgreSQL)
 
 ### Rate Limiting
 - Applied at route level using `slowapi`
-- Configured via environment variables (RATE_LIMIT_RSVP, RATE_LIMIT_ADMIN_LOGIN)
+- Configured via environment variables (RATE_LIMIT_RSVP, RATE_LIMIT_ADMIN_LOGIN, RATE_LIMIT_GUEST_INFO)
+- Limits are per client address. Behind a proxy, uvicorn reads it from X-Forwarded-For only for addresses in `FORWARDED_ALLOW_IPS` (the AWS stack sets the VPC range)
 - Pattern: `@limiter.limit(settings.rate_limit_rsvp)` on route function
 
 ### Authentication
@@ -151,7 +152,9 @@ Each invited guest receives a unique secure token that can be encoded in a QR co
 **Security:**
 - Tokens are generated with 256 bits of entropy using `secrets.token_urlsafe()`
 - Tokens are unique per guest and indexed in the database
-- Token validation is rate-limited via the RSVP endpoint rate limit
+- Token lookups are rate-limited (`RATE_LIMIT_GUEST_INFO`, default 20/hour per address)
+- Tokens stop working after the invitation's `rsvp_deadline` (valid through that day, UTC)
+- Tokens are redacted from uvicorn access logs (`RedactGuestTokens` in `main.py`)
 
 ### Invited Guest Statistics
 
@@ -243,6 +246,7 @@ The application uses **pydantic-settings** for configuration management. All set
 - `JWT_EXPIRATION_MINUTES` - Token expiration (default: 60)
 - `EMAIL_ENABLED` - Enable email notifications (default: false)
 - `REQUIRE_INVITED_GUEST_VALIDATION` - Validate phone numbers (default: false)
+- `RATE_LIMIT_GUEST_INFO` - Rate limit for QR token lookups (default: 20/hour)
 
 ### Setup Instructions
 
@@ -329,6 +333,19 @@ EMAIL_ENABLED=true
 - Fixtures provide database sessions and test data
 - Always test both success and error cases
 - Frontend unit tests use Vitest, as `*.test.js` files next to the code (`npm test`)
+
+## Guest Data and Privacy
+
+Guests' names, phones, emails, dietary needs (which can reveal health or religion) and messages are personal data.
+
+- **Never log them.** Log IDs and confirmation numbers instead; log exceptions by type (`type(e).__name__`), since
+  database errors quote the offending values. Database driver loggers are pinned to WARNING in `main.py` so
+  `LOG_LEVEL=DEBUG` cannot print query parameters. `tests/integration/test_api/test_guest_privacy.py` checks this.
+- **Admin notification emails** carry only the name, attending status, plus-one and children count.
+- **Public endpoints** never return internal error text (see `/api/monitoring/health/detailed`).
+- **Erasure:** `POST /api/admin/guest-data/delete` with `{"confirmation": "DELETE ALL GUEST DATA"}` deletes every
+  RSVP and invited guest (`GuestDataService`); the admin panel has the button. The RSVP page promises guests this
+  happens after the wedding.
 
 ## Important Notes
 

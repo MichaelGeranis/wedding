@@ -470,11 +470,11 @@ show_outputs() {
         --output table
     echo ""
 
-    # Get ALB URL
+    # Get the site's URL (https://DomainName when a certificate is set)
     ALB_URL=$(aws cloudformation describe-stacks \
         --stack-name "$STACK_NAME" \
         --region "$REGION" \
-        --query 'Stacks[0].Outputs[?OutputKey==`LoadBalancerURL`].OutputValue' \
+        --query 'Stacks[0].Outputs[?OutputKey==`SiteURL`].OutputValue' \
         --output text)
 
     echo -e "${GREEN}========================================${NC}"

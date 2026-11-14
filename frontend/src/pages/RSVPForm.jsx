@@ -496,6 +496,9 @@ function RSVPForm() {
                   </>
                 )}
               </Button>
+              <p className="text-charcoal/60 text-sm text-center mt-4">
+                {t('rsvp.privacy_notice')}
+              </p>
             </div>
           </form>
         </motion.div>

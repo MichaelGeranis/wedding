@@ -34,10 +34,11 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)) -> dict[str,
             "message": "Database connection successful",
         }
     except Exception as e:
-        logger.error(f"Database health check failed: {e}")
+        # This endpoint is public: the error's text can name the database host or user, so it stays in the log.
+        logger.error(f"Database health check failed: {type(e).__name__}")
         checks["database"] = {
             "status": "unhealthy",
-            "message": f"Database connection failed: {str(e)}",
+            "message": "Database connection failed",
         }
         health_status["status"] = "unhealthy"
 

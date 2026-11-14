@@ -12,8 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from wedding_api.config import settings
 from wedding_api.dependencies import CurrentAdmin
 from wedding_api.models.admin import AdminLoginRequest, AdminTokenResponse
+from wedding_api.models.guest_data import GuestDataDeletionRequest, GuestDataDeletionResponse
 from wedding_api.models.rsvp import RSVPListResponse
 from wedding_api.services.auth_service import AuthService
+from wedding_api.services.guest_data_service import GuestDataService
 from wedding_api.services.invited_guest_service import InvitedGuestService
 from wedding_api.services.rsvp_service import RSVPService
 from wedding_api.utils.csv_export import generate_guest_summary_csv, generate_rsvp_csv
@@ -34,7 +36,7 @@ async def admin_login(request: Request, credentials: AdminLoginRequest, db: Asyn
     token_response = await service.authenticate_admin(credentials.username, credentials.password.get_secret_value())
 
     if not token_response:
-        logger.warning(f"Failed admin login attempt for user: {credentials.username}")
+        logger.warning("Failed admin login attempt")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
@@ -181,3 +183,13 @@ async def export_guest_summary_csv(
             "Content-Disposition": 'attachment; filename="wedding_rsvp_summary.csv"',
         },
     )
+
+
+@router.post("/guest-data/delete", response_model=GuestDataDeletionResponse)
+async def delete_all_guest_data(admin: CurrentAdmin, request: GuestDataDeletionRequest, db: AsyncSession = Depends(get_db)) -> GuestDataDeletionResponse:
+    """Delete every RSVP and invited guest, including QR code tokens (admin only). For after the wedding."""
+    logger.info(f"Admin {admin} deleting all guest data")
+    try:
+        return await GuestDataService(db).delete_all(request.confirmation)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

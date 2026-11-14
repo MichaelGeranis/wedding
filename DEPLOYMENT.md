@@ -2,7 +2,7 @@
 
 Complete guide for deploying the Wedding Application to AWS using CloudFormation, ECS Fargate, and RDS PostgreSQL.
 
-## Cost Estimate: ~$44/month
+## Cost Estimate: ~$45/month
 
 - **RDS PostgreSQL** (db.t4g.micro, single AZ): ~$13/month
 - **ECS Fargate** (2 tasks @ 0.25 vCPU, 512 MB): ~$10/month
@@ -70,7 +70,27 @@ uv run python scripts/generate_secrets.py
 # SAVE THESE VALUES - you'll need them in the next step
 ```
 
-### Step 2: Create Parameters File
+### Step 2: Get an HTTPS Certificate
+
+The stack refuses to deploy without one: guests' names, phone numbers and dietary needs, and the admin password,
+must not cross the internet unencrypted. You need a domain you control.
+
+```bash
+# Use the region you deploy the stack to (deploy.sh's REGION), not us-east-1 unless that is it
+aws acm request-certificate \
+  --domain-name wedding.yourdomain.com \
+  --validation-method DNS \
+  --region YOUR_STACK_REGION
+```
+
+Add the CNAME record ACM shows to your domain's DNS, wait until the certificate's status is `ISSUED`, and note its
+ARN for the next step. After deploying, point the domain at the load balancer (see [HTTPS and your
+domain](#https-and-your-domain)).
+
+For a throwaway test stack with no real guests you may instead set `AllowPlainHttp` to `true` and leave
+`CertificateArn` and `DomainName` empty.
+
+### Step 3: Create Parameters File
 
 ```bash
 cd ../infrastructure
@@ -116,14 +136,22 @@ Update the following values in `parameters.json`:
   },
   {
     "ParameterKey": "DomainName",
-    "ParameterValue": ""
+    "ParameterValue": "wedding.yourdomain.com"
+  },
+  {
+    "ParameterKey": "CertificateArn",
+    "ParameterValue": "arn:aws:acm:REGION:ACCOUNT_ID:certificate/CERTIFICATE_ID"
   }
 ]
 ```
 
 **IMPORTANT**: Replace `your-dockerhub-username` with your actual Docker Hub username.
 
-### Step 3: Deploy Using Helper Script
+`DBPassword` may not contain quotes, backslashes, `@`, `/` or spaces, and `AdminPasswordHash` must be the bcrypt
+hash from step 1: the stack rejects anything else. Secrets go into one AWS Secrets Manager secret (`STACK/app`), not
+into the ECS task definition.
+
+### Step 4: Deploy Using Helper Script
 
 The easiest way to deploy is using the provided deployment script:
 
@@ -142,7 +170,7 @@ This will:
 5. Wait for deployment to complete (~15-20 minutes)
 6. Display the application URL
 
-### Step 4: Run Database Migrations
+### Step 5: Run Database Migrations
 
 After the stack is deployed, you need to initialize the database:
 
@@ -153,7 +181,7 @@ After the stack is deployed, you need to initialize the database:
 
 This will connect to a running backend container and execute `alembic upgrade head`.
 
-### Step 5: Verify Deployment
+### Step 6: Verify Deployment
 
 ```bash
 # Check service status
@@ -331,47 +359,44 @@ Create CloudWatch alarms for:
 - Database connections (>80% of max)
 - ALB 5XX errors
 
-## Custom Domain Setup
+## HTTPS and your domain
 
-### 1. Request ACM Certificate
+With `CertificateArn` set, the load balancer serves the site on 443 (TLS 1.2 and 1.3 only) and redirects port 80
+to HTTPS. Once the stack is up, create a DNS record for `DomainName` pointing at the load balancer: a Route 53
+alias A record, or a CNAME to the `LoadBalancerURL` output's host name at another DNS provider.
 
-```bash
-aws acm request-certificate \
-  --domain-name wedding.yourdomain.com \
-  --validation-method DNS \
-  --region us-east-1
-```
+## Upgrading a stack created before HTTPS and encryption
 
-### 2. Validate Certificate
+Earlier versions of this template stored the database unencrypted. RDS cannot encrypt an existing instance in
+place, so updating such a stack **replaces the database with a new, empty, encrypted one**. The template now keeps a
+snapshot of the old instance when it is replaced, but that snapshot is not restored into the new one. To keep your
+guests' data:
 
-Add the DNS records shown in ACM to your domain's DNS.
+1. Export everything from the admin panel (all RSVPs CSV, and the invitation list CSV).
+2. Update the stack with the new parameters (`CertificateArn`, `DomainName`).
+3. Run the migrations, then import the invitation list CSV again. Guests who already answered need to RSVP again,
+   or you restore the old snapshot into a temporary instance and copy the `rsvps` table across.
+4. Delete the old instance's snapshot once you no longer need it: it still holds the unencrypted data.
 
-### 3. Update Stack
+The database also moves from PostgreSQL 16.3, which RDS no longer offers for new instances, to 18, the version
+the Docker setup uses.
 
-Edit `parameters.json`:
+## Guest data and privacy
 
-```json
-{
-  "ParameterKey": "DomainName",
-  "ParameterValue": "wedding.yourdomain.com"
-}
-```
-
-Deploy the update:
-
-```bash
-./deploy.sh deploy
-```
-
-### 4. Create Route 53 Record
-
-Create an A record (Alias) pointing to the ALB.
+- **Logs** hold no guest names, phone numbers, emails, dietary needs or messages, and QR code tokens are redacted
+  from access logs. CloudWatch keeps logs for 7 days.
+- **Admin emails** say only who answered and how many are coming. Details stay in the admin panel.
+- **QR codes** stop working after the invitation's RSVP deadline.
+- **After the wedding**, use *Delete all guest data* at the bottom of the admin panel, then delete the stack
+  (`./manage.sh delete`) and its final database snapshot. The RSVP page tells guests their answers are deleted
+  after the wedding, so do it.
 
 ## Backup and Restore
 
 ### Database Backups
 
-RDS automatically creates daily backups (retained for 7 days).
+Automated backups are off (`BackupRetentionPeriod: 0`) to stay in the free tier. Take manual snapshots before risky
+changes, and delete them after the wedding: they contain guest data.
 
 To create a manual snapshot:
 
@@ -456,13 +481,13 @@ aws elbv2 describe-target-health \
 
 ## Security Best Practices
 
-1. **Enable HTTPS**: Add ACM certificate and HTTPS listener
+1. **HTTPS**: Required by the template (see Step 2)
 2. **Rotate Secrets**: Regularly update database password and JWT secret
 3. **Enable GuardDuty**: Threat detection (~$1/month)
 4. **Enable CloudTrail**: API audit logging
 5. **Restrict Database**: Move to private subnet (requires NAT Gateway)
 6. **Enable WAF**: Web Application Firewall for ALB (~$5/month)
-7. **Enable Encryption**: Database encryption at rest (enabled by default)
+7. **Encryption at rest**: The database is encrypted (`StorageEncrypted`), and secrets live in Secrets Manager
 
 ## Cleanup
 
@@ -498,8 +523,7 @@ aws rds delete-db-snapshot --db-snapshot-identifier final-snapshot-id
 1. ✅ Deploy the application
 2. ✅ Run database migrations
 3. ✅ Test all endpoints
-4. Set up custom domain (optional)
-5. Enable HTTPS (recommended)
-6. Configure monitoring and alarms
+4. Point your domain at the load balancer
+5. Configure monitoring and alarms
 7. Set up CI/CD pipeline (GitHub Actions, etc.)
-8. Enable backups and disaster recovery plan
+7. Enable backups and disaster recovery plan

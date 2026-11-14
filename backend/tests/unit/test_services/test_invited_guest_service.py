@@ -1,7 +1,8 @@
 """Unit tests for InvitedGuestService."""
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from types import SimpleNamespace
 
 import pytest
 
@@ -94,6 +95,7 @@ async def test_check_phone_invited_and_get_by_token(monkeypatch) -> None:
     fake = FakeRepo()
     service = InvitedGuestService.__new__(InvitedGuestService)
     service.repository = fake
+    service.invitation_repository = FakeInvitationRepo(None)
 
     create = InvitedGuestCreate(name="Alice", phone="+1112223333", notes=None)
     created = await service.create_invited_guest(create)
@@ -139,3 +141,40 @@ async def test_list_update_delete_and_stats(monkeypatch) -> None:
     assert deleted is True
     listing2 = await service.list_invited_guests()
     assert listing2.total == 2
+
+
+class FakeInvitationRepo:
+    def __init__(self, rsvp_deadline: str | None):
+        self._rsvp_deadline = rsvp_deadline
+
+    async def get_invitation(self):
+        return None if self._rsvp_deadline is None else SimpleNamespace(rsvp_deadline=self._rsvp_deadline)
+
+
+async def _service_with_guest(rsvp_deadline: str | None) -> tuple[InvitedGuestService, str]:
+    service = InvitedGuestService.__new__(InvitedGuestService)
+    service.repository = FakeRepo()
+    service.invitation_repository = FakeInvitationRepo(rsvp_deadline)
+    created = await service.create_invited_guest(InvitedGuestCreate(name="Alice", phone="+1112223333", notes=None))
+    return service, created.token
+
+
+@pytest.mark.asyncio
+async def test_get_guest_by_token_whenondeadlineday_returnsguest() -> None:
+    service, token = await _service_with_guest("2027-05-12")
+
+    assert await service.get_guest_by_token(token, today=date(2027, 5, 12)) is not None
+
+
+@pytest.mark.asyncio
+async def test_get_guest_by_token_whendeadlinepassed_returnsnone() -> None:
+    service, token = await _service_with_guest("2027-05-12")
+
+    assert await service.get_guest_by_token(token, today=date(2027, 5, 13)) is None
+
+
+@pytest.mark.asyncio
+async def test_get_guest_by_token_whendeadlineunreadable_returnsguest() -> None:
+    service, token = await _service_with_guest("12/05/2027")
+
+    assert await service.get_guest_by_token(token, today=date(2030, 1, 1)) is not None

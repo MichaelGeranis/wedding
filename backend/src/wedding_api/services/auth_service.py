@@ -22,17 +22,17 @@ class AuthService:
 
     async def authenticate_admin(self, username: str, password: str) -> AdminTokenResponse | None:
         """Authenticate admin with username and password."""
-        logger.info(f"Admin authentication attempt for user: {username}")
+        logger.info("Admin authentication attempt")
 
         result = await self.db.execute(select(User).where(User.username == username, User.is_active == True))  # noqa: E712
         user = result.scalar_one_or_none()
 
         if not user:
-            logger.warning(f"Admin authentication failed: user '{username}' not found")
+            logger.warning("Admin authentication failed: unknown user")
             return None
 
         if not verify_password(password, user.password_hash):
-            logger.warning(f"Admin authentication failed: invalid password for user '{username}'")
+            logger.warning("Admin authentication failed: invalid password")
             return None
 
         token, expiration = create_access_token(subject=username)

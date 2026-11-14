@@ -4,7 +4,7 @@ import logging
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import case, func, select
+from sqlalchemy import case, delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -73,10 +73,10 @@ class RSVPRepository:
                 else:
                     msg = "An RSVP with the provided details already exists."
 
-                logger.warning(f"IntegrityError while creating RSVP: {ie}; responding with friendly error")
+                logger.warning("IntegrityError while creating RSVP; responding with friendly error")
                 raise ValueError(msg) from ie
 
-            logger.info(f"RSVP created for guest: {rsvp.guest_name}")
+            logger.info(f"RSVP created: {confirmation_number}")
 
             # Update invited guest if exists
             if phone_val:
@@ -85,7 +85,7 @@ class RSVPRepository:
                 if invited_guest:
                     invited_guest.rsvp_received = True
                     await self.db.flush()
-                    logger.info(f"Marked invited guest with phone {phone_val} as having RSVP'd")
+                    logger.info("Marked the matching invited guest as having RSVP'd")
 
             return RSVPResponse(
                 id=rsvp_model.id,
@@ -102,7 +102,7 @@ class RSVPRepository:
                 updated_at=rsvp_model.updated_at,
             )
         except Exception as e:
-            logger.error(f"Error creating RSVP: {e}")
+            logger.error(f"Error creating RSVP: {type(e).__name__}")
             raise  # Let the dependency handle rollback
 
     async def get_rsvp_by_email(self, email: str) -> RSVPResponse | None:
@@ -131,7 +131,7 @@ class RSVPRepository:
                 updated_at=rsvp_model.updated_at,
             )
         except Exception as e:
-            logger.error(f"Error getting RSVP by email: {e}")
+            logger.error(f"Error getting RSVP by email: {type(e).__name__}")
             raise
 
     async def list_rsvps(self, attending_filter: bool | None, limit: int = 100, offset: int = 0) -> tuple[list[RSVPResponse], int]:
@@ -175,7 +175,7 @@ class RSVPRepository:
             logger.info(f"Retrieved {len(rsvps)} RSVPs")
             return rsvps, total
         except Exception as e:
-            logger.error(f"Error listing RSVPs: {e}")
+            logger.error(f"Error listing RSVPs: {type(e).__name__}")
             raise
 
     async def get_rsvp_counts(self) -> dict[str, int]:
@@ -204,7 +204,7 @@ class RSVPRepository:
             logger.info(f"RSVP counts retrieved: {counts}")
             return counts
         except Exception as e:
-            logger.error(f"Error getting RSVP counts: {e}")
+            logger.error(f"Error getting RSVP counts: {type(e).__name__}")
             raise
 
     async def get_children_count_deduplicated(self) -> int:
@@ -238,7 +238,7 @@ class RSVPRepository:
             logger.info(f"Deduplicated children count: {total_children}")
             return int(total_children) if total_children else 0
         except Exception as e:
-            logger.error(f"Error getting deduplicated children count: {e}")
+            logger.error(f"Error getting deduplicated children count: {type(e).__name__}")
             raise
 
     async def delete_rsvp_by_id(self, rsvp_id: str) -> bool:
@@ -278,5 +278,12 @@ class RSVPRepository:
             logger.info(f"Post-delete existence check for {uuid_val}: {exists}")
             return exists is None
         except Exception as e:
-            logger.error(f"Error deleting RSVP {rsvp_id}: {e}")
+            logger.error(f"Error deleting RSVP {rsvp_id}: {type(e).__name__}")
             raise
+
+    async def delete_all_rsvps(self) -> int:
+        """Delete every RSVP; returns how many were deleted."""
+        count = (await self.db.execute(select(func.count()).select_from(RSVP))).scalar_one()
+        await self.db.execute(delete(RSVP))
+        await self.db.flush()
+        return int(count)

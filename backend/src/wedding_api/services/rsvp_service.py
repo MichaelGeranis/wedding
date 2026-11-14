@@ -23,7 +23,7 @@ class RSVPService:
 
     async def submit_rsvp(self, rsvp_data: RSVPCreate) -> RSVPResponse:
         """Submit a new RSVP."""
-        logger.info(f"Submitting RSVP for {getattr(rsvp_data, 'email', None) or rsvp_data.guest_name}")
+        logger.info("Submitting RSVP")
 
         # Trim all string fields before saving (use Pydantic v2 API)
         for field, value in rsvp_data.model_dump().items():
@@ -33,7 +33,7 @@ class RSVPService:
         # Validate phone number against invited guests list if enabled
         if settings.require_invited_guest_validation:
             if not rsvp_data.phone:
-                logger.warning(f"RSVP rejected - phone number required when validation is enabled: {getattr(rsvp_data, 'email', None) or rsvp_data.guest_name}")
+                logger.warning("RSVP rejected - phone number required when validation is enabled")
                 raise PermissionError("Phone number is required to submit an RSVP")
 
             # Normalize phone for comparison (digits only)
@@ -41,20 +41,20 @@ class RSVPService:
 
             invited_guest = await self.invited_guest_repository.get_invited_guest_by_phone(phone_digits)
             if not invited_guest:
-                logger.warning(f"RSVP rejected - phone not in invited list: {rsvp_data.phone}")
+                logger.warning("RSVP rejected - phone not in invited list")
                 raise PermissionError("Your phone number is not in our invitation list. Please use another of your mobile numbers or contact the couple if you believe this is an error.")
 
-            logger.info(f"Phone {rsvp_data.phone} validated against invited guest: {invited_guest.name}")
+            logger.info(f"Phone validated against invited guest ID {invited_guest.id}")
 
         try:
             response = await self.repository.create_rsvp(rsvp_data)
 
-            logger.info(f"RSVP submitted successfully for {getattr(rsvp_data, 'email', None) or rsvp_data.guest_name} with confirmation {response.confirmation_number}")
+            logger.info(f"RSVP submitted successfully with confirmation {response.confirmation_number}")
 
             return response
 
-        except ValueError as e:
-            logger.warning(f"RSVP submission failed for {getattr(rsvp_data, 'email', None) or rsvp_data.guest_name}: {e}")
+        except ValueError:
+            logger.warning("RSVP submission failed: duplicate")
             raise
 
     async def get_rsvp_by_email(self, email: str) -> RSVPResponse | None:

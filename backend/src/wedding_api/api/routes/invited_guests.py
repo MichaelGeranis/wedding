@@ -27,7 +27,7 @@ async def create_invited_guest(
     db: AsyncSession = Depends(get_db),
 ) -> InvitedGuestResponse:
     """Create a new invited guest (admin only)."""
-    logger.info(f"Admin {admin} creating invited guest: {guest_data.name}")
+    logger.info(f"Admin {admin} creating invited guest")
 
     service = InvitedGuestService(db)
     guest = await service.create_invited_guest(guest_data)

@@ -71,7 +71,7 @@ class InvitationRepository:
                 rsvp_deadline=invitation_model.rsvp_deadline,
             )
         except Exception as e:
-            logger.error(f"Error getting invitation: {e}")
+            logger.error(f"Error getting invitation: {type(e).__name__}")
             raise
 
     async def save_invitation(self, invitation: InvitationResponse) -> InvitationResponse:
@@ -168,7 +168,7 @@ class InvitationRepository:
                 rsvp_deadline=invitation_model.rsvp_deadline,
             )
         except Exception as e:
-            logger.error(f"Error saving invitation: {e}")
+            logger.error(f"Error saving invitation: {type(e).__name__}")
             raise  # Let the dependency handle rollback
 
     async def delete_invitation(self, invitation_id: int) -> None:
@@ -184,5 +184,5 @@ class InvitationRepository:
             else:
                 logger.warning(f"Invitation with ID {invitation_id} not found")
         except Exception as e:
-            logger.error(f"Error deleting invitation: {e}")
+            logger.error(f"Error deleting invitation: {type(e).__name__}")
             raise  # Let the dependency handle rollback
