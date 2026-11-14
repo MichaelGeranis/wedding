@@ -1,6 +1,7 @@
 """Main FastAPI application entry point."""
 
 import logging
+import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -21,6 +22,25 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Database drivers log every statement with its parameters at DEBUG, which would put guests' names, phones and
+# dietary needs in the logs. Keep them at WARNING whatever LOG_LEVEL is.
+for _driver_logger in ("sqlalchemy.engine", "aiosqlite", "asyncpg"):
+    logging.getLogger(_driver_logger).setLevel(logging.WARNING)
+
+
+class RedactGuestTokens(logging.Filter):
+    """Hide QR code tokens in access log lines: a token shows its guest's name and phone to whoever has it."""
+
+    _token = re.compile(r"([?&]token=)[^&\s\"]+")
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.args, tuple):
+            record.args = tuple(self._token.sub(r"\1[redacted]", a) if isinstance(a, str) else a for a in record.args)
+        return True
+
+
+logging.getLogger("uvicorn.access").addFilter(RedactGuestTokens())
 
 
 @asynccontextmanager
@@ -139,7 +159,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Return standardized JSON for unhandled exceptions."""
-    logger.error(f"Unhandled exception: {exc}")
+    logger.error(f"Unhandled exception: {type(exc).__name__}")
     return JSONResponse(status_code=500, content={"error": "500", "detail": "Internal server error"})
 
 

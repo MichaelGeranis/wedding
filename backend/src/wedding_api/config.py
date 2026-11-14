@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     # Rate Limiting
     rate_limit_rsvp: str = Field(..., description="Rate limit for RSVP endpoint (max submissions per IP per day)")
     rate_limit_admin_login: str = Field(..., description="Rate limit for admin login endpoint")
+    rate_limit_guest_info: str = Field(default="20/hour", description="Rate limit for looking up a guest by their QR code token")
 
     # RSVP Validation
     require_invited_guest_validation: bool = Field(default=False, description="Require phone number to be in invited guests list")

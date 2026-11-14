@@ -47,7 +47,8 @@
     "submitting": "Submitting...",
     "success_title": "Thank you!",
     "success_message": "Your RSVP has been received.",
-    "confirmation_number": "Confirmation Number"
+    "confirmation_number": "Confirmation Number",
+    "privacy_notice": "We use your answers only to plan our wedding. Only we can see them, and we delete them after the wedding. If you'd like them removed sooner, just ask us."
   },
   "admin": {
     "login_title": "Admin Login",
@@ -98,7 +99,13 @@
     "download_attending": "Download Attending",
     "download_not_attending": "Download Not Attending",
     "contact": "Contact",
-    "no_guests": "No guests found"
+    "no_guests": "No guests found",
+    "delete_all_title": "After the wedding",
+    "delete_all_description": "Delete every RSVP and the whole invitation list, including QR codes, once you no longer need them. Export a CSV first if you want to keep a copy.",
+    "delete_all_button": "Delete all guest data",
+    "delete_all_prompt": "This permanently deletes every RSVP and invited guest. Type {{phrase}} to confirm.",
+    "delete_all_done": "Deleted {{rsvps}} RSVPs and {{guests}} invited guests.",
+    "delete_all_failed": "Guest data was not deleted."
   },
   "invited_guests": {
     "title": "Invitation List",

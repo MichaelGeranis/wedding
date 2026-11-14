@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-Deploy your wedding application to AWS in 4 simple steps.
+Deploy your wedding application to AWS in 5 steps.
 
 ## Prerequisites
 
@@ -8,6 +8,7 @@ Deploy your wedding application to AWS in 4 simple steps.
 - AWS CLI configured
 - Docker installed
 - Docker Hub account
+- A domain you control (for the HTTPS certificate)
 
 ## Deployment Steps
 
@@ -20,7 +21,12 @@ uv run python scripts/generate_secrets.py
 
 Save the JWT_SECRET_KEY and ADMIN_PASSWORD_HASH outputs.
 
-### 2. Configure Parameters
+### 2. Get an HTTPS Certificate
+
+Request an ACM certificate for your domain, in the region you deploy to, and validate it by DNS
+(see DEPLOYMENT.md, Step 2). The stack will not deploy without one.
+
+### 3. Configure Parameters
 
 ```bash
 cd ../infrastructure
@@ -34,8 +40,10 @@ Fill in:
 - AdminPasswordHash (from step 1)
 - BackendImage (your-dockerhub-username/wedding-backend:latest)
 - FrontendImage (your-dockerhub-username/wedding-frontend:latest)
+- DomainName (e.g. wedding.yourdomain.com)
+- CertificateArn (from step 2)
 
-### 3. Deploy
+### 4. Deploy
 
 ```bash
 ./deploy.sh all
@@ -46,7 +54,7 @@ This takes 15-20 minutes. It will:
 - Create AWS infrastructure
 - Deploy your application
 
-### 4. Run Migrations
+### 5. Run Migrations
 
 ```bash
 ./manage.sh migrations
@@ -65,7 +73,8 @@ Visit the URL to see your wedding application!
 ## What's Next?
 
 - Test the application
-- Set up custom domain (optional)
+- Point your domain at the load balancer (`LoadBalancerURL` output)
+- After the wedding: *Delete all guest data* in the admin panel, then `./manage.sh delete`
 - Configure monitoring
 - Review cost optimization tips
 
@@ -92,7 +101,7 @@ See DEPLOYMENT.md for detailed documentation.
 
 ## Estimated Cost
 
-~$44/month (see cost breakdown with `./cost-calculator.sh`)
+~$45/month (see cost breakdown with `./cost-calculator.sh`)
 
 ## Need Help?
 

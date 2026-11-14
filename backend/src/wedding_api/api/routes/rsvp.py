@@ -29,15 +29,15 @@ async def submit_rsvp(request: Request, rsvp_data: RSVPCreate, db: AsyncSession 
 
     try:
         rsvp = await service.submit_rsvp(rsvp_data)
-        logger.info(f"RSVP submitted: {getattr(rsvp, 'email', None) or rsvp.guest_name} - {rsvp.confirmation_number}")
+        logger.info(f"RSVP submitted: {rsvp.confirmation_number}")
 
         # Send confirmation email to guest (non-blocking)
         try:
+            # The guest's confirmation repeats what they wrote, to their own address.
             rsvp_details = {
                 "plus_one": rsvp.plus_one,
                 "dietary_restrictions": rsvp.dietary_restrictions,
                 "message": rsvp.message,
-                "phone": rsvp.phone,
             }
 
             await email_service.send_rsvp_confirmation(
@@ -51,24 +51,23 @@ async def submit_rsvp(request: Request, rsvp_data: RSVPCreate, db: AsyncSession 
 
             await email_service.send_admin_notification(
                 guest_name=rsvp.guest_name,
-                guest_email=rsvp.email,
                 attending=rsvp.attending,
-                rsvp_details=rsvp_details,
+                rsvp_details={"plus_one": rsvp.plus_one, "children_count": rsvp.children_count},
             )
 
         except Exception as email_error:
-            logger.error(f"Failed to send email notifications: {email_error}")
+            logger.error(f"Failed to send email notifications for {rsvp.confirmation_number}: {type(email_error).__name__}")
 
         return rsvp
 
     except PermissionError as e:
-        logger.warning(f"RSVP rejected - not invited: {getattr(rsvp_data, 'email', None) or rsvp_data.guest_name}")
+        logger.warning("RSVP rejected - not invited")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except ValueError as e:
-        logger.warning(f"Duplicate RSVP attempt: {getattr(rsvp_data, 'email', None) or rsvp_data.guest_name}")
+        logger.warning("Duplicate RSVP attempt")
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     except Exception as e:
-        logger.error(f"Error submitting RSVP: {e}")
+        logger.error(f"Error submitting RSVP: {type(e).__name__}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while submitting your RSVP. Please try again.",
@@ -76,11 +75,13 @@ async def submit_rsvp(request: Request, rsvp_data: RSVPCreate, db: AsyncSession 
 
 
 @router.get("/rsvp/guest-info", response_model=GuestInfoFromToken)
-async def get_guest_info_by_token(token: str, db: AsyncSession = Depends(get_db)) -> GuestInfoFromToken:
+@limiter.limit(settings.rate_limit_guest_info)
+async def get_guest_info_by_token(request: Request, token: str, db: AsyncSession = Depends(get_db)) -> GuestInfoFromToken:
     """
     Validate a guest token and return guest information for RSVP form pre-fill.
     This is a public endpoint that allows guests with a valid QR code token
     to retrieve their name and phone number to pre-fill the RSVP form.
+    Tokens stop working after the RSVP deadline, and lookups are rate limited per address.
     """
     logger.info("Guest info requested with token")
 
@@ -91,6 +92,6 @@ async def get_guest_info_by_token(token: str, db: AsyncSession = Depends(get_db)
         logger.warning("Invalid token used for guest info lookup")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid or expired token")
 
-    logger.info(f"Guest info retrieved for token: {guest.name}")
+    logger.info(f"Guest info retrieved for invited guest ID {guest.id}")
 
     return GuestInfoFromToken(name=guest.name, phone=guest.phone)

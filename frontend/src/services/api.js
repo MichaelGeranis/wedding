@@ -78,6 +78,11 @@ export const adminAPI = {
     return response.status === 204
   },
 
+  deleteAllGuestData: async (confirmation) => {
+    const response = await api.post('/admin/guest-data/delete', { confirmation })
+    return response.data
+  },
+
   exportGuestsCSV: async (attending = null) => {
     const params = {}
     if (attending !== null) {

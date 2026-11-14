@@ -7,6 +7,11 @@ All notable changes are recorded here. The format follows
 
 ### Upgrade notes
 
+- **AWS:** the stack now requires `CertificateArn` and `DomainName` (HTTPS), or
+  `AllowPlainHttp=true` for a test stack. Turning on database encryption
+  replaces an existing RDS instance with a new, empty one: export guest data
+  first. See DEPLOYMENT.md, "Upgrading a stack created before HTTPS and
+  encryption".
 - The demo database moves from PostgreSQL 16 to 18, which cannot read the old
   data volume (and keeps its data at a new path inside the volume). Recreate it
   with `docker compose down -v` before `docker compose up --build`; this
@@ -14,6 +19,12 @@ All notable changes are recorded here. The format follows
 
 ### Added
 
+- HTTPS on AWS: an HTTPS listener (TLS 1.2+) with HTTP redirecting to it.
+- *Delete all guest data* in the admin panel
+  (`POST /api/admin/guest-data/delete`), for after the wedding.
+- A privacy notice on the RSVP page, in English and Greek.
+- QR code tokens stop working after the RSVP deadline, and token lookups are
+  rate limited (`RATE_LIMIT_GUEST_INFO`).
 - Vitest unit tests for the RSVP validation schema, run in CI (`npm test`).
 - CI type-checks the backend with mypy.
 - `docker compose up --build` works with no setup, using the public demo
@@ -25,6 +36,15 @@ All notable changes are recorded here. The format follows
 
 ### Changed
 
+- Logs no longer contain guests' names, phones, emails or dietary needs,
+  database errors are logged by type only, and QR tokens are redacted from
+  access logs.
+- Admin notification emails carry only the guest's name and head count.
+- `/api/monitoring/health/detailed` no longer returns database error text.
+- AWS: the database is encrypted at rest and kept as a snapshot when replaced
+  or deleted; secrets moved from plain SSM parameters and task definition
+  environment variables to one Secrets Manager secret; rate limits count each
+  guest's own address instead of the load balancer's; PostgreSQL 18.
 - Python 3.14 (from 3.13; 3.15 waits for PyYAML wheels) and the latest version
   of every backend dependency.
 - Node 26 LTS, React 19, Vite 8, Tailwind CSS 4, React Router 8, zod 4,

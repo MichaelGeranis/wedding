@@ -2,11 +2,13 @@
 
 import logging
 import re
+from datetime import UTC, date, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from wedding_api.models.invited_guest import InvitedGuestCreate, InvitedGuestImportResponse, InvitedGuestListResponse, InvitedGuestResponse, InvitedGuestUpdate
 from wedding_api.models.invited_guest_stats import InvitedGuestStats
+from wedding_api.repositories.invitation_repository_pg import InvitationRepository
 from wedding_api.repositories.invited_guest_repository_pg import InvitedGuestRepository
 from wedding_api.utils.csv_export import parse_invited_guests_csv
 
@@ -19,10 +21,11 @@ class InvitedGuestService:
     def __init__(self, db: AsyncSession):
         """Initialize service with database session."""
         self.repository = InvitedGuestRepository(db)
+        self.invitation_repository = InvitationRepository(db)
 
     async def create_invited_guest(self, guest_data: InvitedGuestCreate) -> InvitedGuestResponse:
         """Create a new invited guest."""
-        logger.info(f"Creating invited guest: {guest_data.name}")
+        logger.info("Creating invited guest")
         return await self.repository.create_invited_guest(guest_data)
 
     async def get_invited_guest(self, guest_id: int) -> InvitedGuestResponse | None:
@@ -32,14 +35,33 @@ class InvitedGuestService:
 
     async def check_phone_invited(self, phone: str) -> bool:
         """Check if a phone number is in the invited guest list."""
-        logger.info(f"Checking if phone {phone} is invited")
+        logger.info("Checking if a phone number is invited")
         guest = await self.repository.get_invited_guest_by_phone(phone)
         return guest is not None
 
-    async def get_guest_by_token(self, token: str) -> InvitedGuestResponse | None:
-        """Get a guest by their unique token."""
+    async def get_guest_by_token(self, token: str, today: date | None = None) -> InvitedGuestResponse | None:
+        """
+        Get a guest by their unique QR code token, while the token is still valid.
+
+        A token reveals the guest's name and phone number to whoever holds the QR code, so it stops working
+        once the RSVP deadline has passed (it is valid through the deadline day, in UTC).
+        """
         logger.info("Fetching guest by token")
+        if await self._rsvp_deadline_passed(today or datetime.now(UTC).date()):
+            logger.info("Guest token lookup refused: the RSVP deadline has passed")
+            return None
         return await self.repository.get_invited_guest_by_token(token)
+
+    async def _rsvp_deadline_passed(self, today: date) -> bool:
+        invitation = await self.invitation_repository.get_invitation()
+        if invitation is None:
+            return False
+        try:
+            deadline = date.fromisoformat(invitation.rsvp_deadline)
+        except ValueError:
+            logger.warning("RSVP deadline is not a YYYY-MM-DD date; guest tokens do not expire")
+            return False
+        return today > deadline
 
     async def list_invited_guests(self) -> InvitedGuestListResponse:
         """Get all invited guests."""
@@ -117,7 +139,7 @@ class InvitedGuestService:
                 existing = await self.repository.get_invited_guest_by_phone(row.phone)
                 if existing:
                     skipped_count += 1
-                    logger.debug(f"Skipping duplicate phone: {row.phone}")
+                    logger.debug(f"Skipping row {row_num}: phone already invited")
                     continue
 
                 # Create the guest

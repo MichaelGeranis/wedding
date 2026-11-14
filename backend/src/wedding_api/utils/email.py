@@ -55,7 +55,7 @@ class EmailService:
     ) -> bool:
         """Send an email."""
         if not self.enabled:
-            logger.info(f"Email disabled. Would have sent to {to_email}: {subject}")
+            logger.info("Email disabled; not sending")
             return True
 
         if not self.smtp_username or not self.smtp_password:
@@ -72,17 +72,17 @@ class EmailService:
                 server.login(self.smtp_username, self.smtp_password)
                 server.send_message(msg)
 
-            logger.info(f"Email sent successfully to {to_email}: {subject}")
+            logger.info("Email sent successfully")
             return True
 
         except smtplib.SMTPAuthenticationError:
             logger.error("SMTP authentication failed. Check credentials.")
             return False
         except smtplib.SMTPException as e:
-            logger.error(f"SMTP error sending email to {to_email}: {e}")
+            logger.error(f"SMTP error sending email: {type(e).__name__}")
             return False
         except Exception as e:
-            logger.error(f"Unexpected error sending email to {to_email}: {e}")
+            logger.error(f"Unexpected error sending email: {type(e).__name__}")
             return False
 
     async def send_rsvp_confirmation(
@@ -114,18 +114,22 @@ class EmailService:
         )
 
         if not guest_email:
-            logger.info(f"No guest email provided for {guest_name}; skipping confirmation email")
+            logger.info("No guest email provided; skipping confirmation email")
             return True
         return await self.send_email(guest_email, subject, html_body, text_body)
 
     async def send_admin_notification(
         self,
         guest_name: str,
-        guest_email: str | None,
         attending: bool,
         rsvp_details: dict[str, Any],
     ) -> bool:
-        """Send admin notification about new RSVP."""
+        """
+        Send the admin a short notice about a new RSVP.
+
+        Mailboxes are kept for years and pass through other providers, so the notice says only who answered and
+        how many are coming. Contact details, dietary needs and messages stay in the admin panel.
+        """
         if not settings.admin_email:
             logger.warning("Admin email not configured")
             return False
@@ -133,19 +137,8 @@ class EmailService:
         status = "ATTENDING" if attending else "NOT ATTENDING"
         subject = f"New RSVP: {guest_name} - {status}"
 
-        html_body = self._generate_admin_notification_html(
-            guest_name=guest_name,
-            guest_email=guest_email or "N/A",
-            attending=attending,
-            rsvp_details=rsvp_details,
-        )
-
-        text_body = self._generate_admin_notification_text(
-            guest_name=guest_name,
-            guest_email=guest_email or "N/A",
-            attending=attending,
-            rsvp_details=rsvp_details,
-        )
+        html_body = self._generate_admin_notification_html(guest_name=guest_name, attending=attending, rsvp_details=rsvp_details)
+        text_body = self._generate_admin_notification_text(guest_name=guest_name, attending=attending, rsvp_details=rsvp_details)
 
         return await self.send_email(settings.admin_email, subject, html_body, text_body)
 
@@ -318,51 +311,28 @@ class EmailService:
 """
         return text
 
+    @staticmethod
+    def _admin_panel_url() -> str:
+        return f"{settings.frontend_url.rstrip('/')}/admin"
+
+    @staticmethod
+    def _admin_summary_lines(attending: bool, rsvp_details: dict[str, Any]) -> list[str]:
+        """The only RSVP details an admin notice carries: whether they come, and with how many."""
+        lines = [f"Status: {'ATTENDING' if attending else 'NOT ATTENDING'}"]
+        if attending and rsvp_details.get("plus_one"):
+            lines.append("Plus One: Yes")
+        if attending and rsvp_details.get("children_count"):
+            lines.append(f"Children: {int(rsvp_details['children_count'])}")
+        return lines
+
     def _generate_admin_notification_html(
         self,
         guest_name: str,
-        guest_email: str,
         attending: bool,
         rsvp_details: dict[str, Any],
     ) -> str:
         """Generate HTML for admin notification email."""
-        status_color = "#4CAF50" if attending else "#9E9E9E"
-
-        plus_one_html = ""
-        if rsvp_details.get("plus_one"):
-            plus_one_html = """
-            <tr>
-                <td style="padding: 8px 0;"><strong>Plus One:</strong> Yes</td>
-            </tr>
-            """
-
-        phone_html = ""
-        if rsvp_details.get("phone"):
-            phone_html = f"""
-            <tr>
-                <td style="padding: 8px 0;"><strong>Phone:</strong> {rsvp_details["phone"]}</td>
-            </tr>
-            """
-
-        dietary_html = ""
-        if rsvp_details.get("dietary_restrictions"):
-            dietary_html = f"""
-            <tr>
-                <td style="padding: 8px 0;"><strong>Dietary Restrictions:</strong> {rsvp_details["dietary_restrictions"]}</td>
-            </tr>
-            """
-
-        message_html = ""
-        if rsvp_details.get("message"):
-            message_html = f"""
-            <tr>
-                <td style="padding: 8px 0;">
-                    <strong>Message:</strong><br>
-                    <em>{rsvp_details["message"]}</em>
-                </td>
-            </tr>
-            """
-
+        rows = "".join(f"""<tr><td style="padding: 8px 0;">{line}</td></tr>""" for line in [f"<strong>Guest Name:</strong> {guest_name}", *self._admin_summary_lines(attending, rsvp_details)])
         return f"""
         <!DOCTYPE html>
         <html>
@@ -374,57 +344,18 @@ class EmailService:
             <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f5f5f5; padding: 40px 20px;">
                 <tr>
                     <td align="center">
-                        <table cellpadding="0" cellspacing="0" border="0" width="600" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            <!-- Header -->
+                        <table cellpadding="0" cellspacing="0" border="0" width="600" style="background-color: #ffffff; border-radius: 8px;">
                             <tr>
                                 <td style="padding: 30px 40px; text-align: center; background-color: #2196F3; border-radius: 8px 8px 0 0;">
                                     <h1 style="margin: 0; color: #ffffff; font-size: 24px;">New RSVP Received</h1>
                                 </td>
                             </tr>
-
-                            <!-- Content -->
                             <tr>
-                                <td style="padding: 40px;">
-                                    <p style="font-size: 16px; line-height: 1.6; color: #333333; margin: 0 0 20px;">
-                                        A new RSVP has been submitted:
-                                    </p>
-
-                                    <!-- RSVP Details -->
-                                    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 20px 0; border: 1px solid #e0e0e0; border-radius: 4px;">
-                                        <tr>
-                                            <td style="padding: 20px; background-color: #fafafa;">
-                                                <table cellpadding="0" cellspacing="0" border="0" width="100%">
-                                                    <tr>
-                                                        <td style="padding: 8px 0;"><strong>Guest Name:</strong> {guest_name}</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td style="padding: 8px 0;"><strong>Email:</strong> {guest_email}</td>
-                                                    </tr>
-                                                    {phone_html}
-                                                    <tr>
-                                                        <td style="padding: 8px 0;">
-                                                            <strong>Status:</strong> <span style="color: {status_color}; font-weight: bold;">{"ATTENDING" if attending else "NOT ATTENDING"}</span>
-                                                        </td>
-                                                    </tr>
-                                                    {plus_one_html}
-                                                    {dietary_html}
-                                                    {message_html}
-                                                </table>
-                                            </td>
-                                        </tr>
-                                    </table>
-
-                                    <p style="font-size: 14px; line-height: 1.6; color: #666666; margin: 20px 0 0;">
-                                        View all RSVPs in the <a href="https://your-domain.com/admin" style="color: #2196F3;">admin panel</a>.
-                                    </p>
-                                </td>
-                            </tr>
-
-                            <!-- Footer -->
-                            <tr>
-                                <td style="padding: 20px 40px; background-color: #f5f5f5; border-radius: 0 0 8px 8px; text-align: center;">
-                                    <p style="margin: 0; font-size: 12px; color: #888888;">
-                                        Wedding Planner Admin Notification
+                                <td style="padding: 40px; font-size: 16px; line-height: 1.6; color: #333333;">
+                                    <table cellpadding="0" cellspacing="0" border="0" width="100%">{rows}</table>
+                                    <p style="font-size: 14px; color: #666666; margin: 20px 0 0;">
+                                        Contact details, dietary needs and messages are in the
+                                        <a href="{self._admin_panel_url()}" style="color: #2196F3;">admin panel</a>.
                                     </p>
                                 </td>
                             </tr>
@@ -439,35 +370,16 @@ class EmailService:
     def _generate_admin_notification_text(
         self,
         guest_name: str,
-        guest_email: str,
         attending: bool,
         rsvp_details: dict[str, Any],
     ) -> str:
         """Generate plain text for admin notification email."""
-        status = "ATTENDING" if attending else "NOT ATTENDING"
-
-        text = f"""
-NEW RSVP RECEIVED
-
-Guest: {guest_name}
-Email: {guest_email}
-Status: {status}
-"""
-
-        if rsvp_details.get("phone"):
-            text += f"Phone: {rsvp_details['phone']}\n"
-
-        if rsvp_details.get("plus_one"):
-            text += "Plus One: Yes\n"
-
-        if rsvp_details.get("dietary_restrictions"):
-            text += f"Dietary Restrictions: {rsvp_details['dietary_restrictions']}\n"
-
-        if rsvp_details.get("message"):
-            text += f"\nMessage:\n{rsvp_details['message']}\n"
-
-        text += "\n---\nWedding Planner Admin Notification"
-        return text
+        summary = "\n".join(self._admin_summary_lines(attending, rsvp_details))
+        return (
+            f"NEW RSVP RECEIVED\n\nGuest: {guest_name}\n{summary}\n\n"
+            f"Contact details, dietary needs and messages are in the admin panel: {self._admin_panel_url()}\n"
+            "\n---\nWedding Planner Admin Notification"
+        )
 
 
 # Global email service instance

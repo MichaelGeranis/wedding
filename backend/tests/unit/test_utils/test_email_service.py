@@ -162,7 +162,7 @@ async def test_send_admin_notification_missing_admin_email(monkeypatch) -> None:
     cfg.settings.admin_email = None
 
     try:
-        result = await svc.send_admin_notification("Guest", "g@e.com", True, {})
+        result = await svc.send_admin_notification("Guest", True, {})
         assert result is False
     finally:
         cfg.settings.admin_email = original
@@ -187,7 +187,7 @@ async def test_send_admin_notification_calls_send_email(monkeypatch) -> None:
     cfg.settings.admin_email = "admin@test"
 
     try:
-        result = await svc.send_admin_notification("Guest", "g@e.com", False, {"phone": "+1"})
+        result = await svc.send_admin_notification("Guest", False, {"phone": "+1"})
         assert result is True
         assert called["to"] == "admin@test"
         assert "New RSVP" in called["subject"]

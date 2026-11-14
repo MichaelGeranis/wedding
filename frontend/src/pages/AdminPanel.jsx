@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router'
 import { motion } from 'framer-motion'
-import { LogOut, Search, Filter, UserPlus } from 'lucide-react'
+import { LogOut, Search, Filter, UserPlus, Trash2 } from 'lucide-react'
 import { useAuth } from '../context/auth'
 import { adminAPI } from '../services/api'
 import { Button } from '../components/ui/Button'
@@ -134,6 +134,20 @@ function AdminPanel() {
     } catch (err) {
       console.error('Delete error', err)
       alert(t('admin.delete_error'))
+    }
+  }
+
+  const handleDeleteAllGuestData = async () => {
+    const phrase = 'DELETE ALL GUEST DATA'
+    const typed = window.prompt(t('admin.delete_all_prompt', { phrase }))
+    if (typed === null) return
+
+    try {
+      const result = await adminAPI.deleteAllGuestData(typed)
+      alert(t('admin.delete_all_done', { rsvps: result.rsvps_deleted, guests: result.invited_guests_deleted }))
+      window.location.reload()
+    } catch (err) {
+      alert(err.response?.data?.detail || t('admin.delete_all_failed'))
     }
   }
 
@@ -355,6 +369,16 @@ function AdminPanel() {
             </Button>
           </motion.div>
         )}
+
+        {/* Erasing guest data once the wedding is over */}
+        <div className="glass-card rounded-3xl p-8 space-y-4">
+          <h2 className="font-serif text-2xl text-charcoal font-semibold">{t('admin.delete_all_title')}</h2>
+          <p className="text-charcoal/70">{t('admin.delete_all_description')}</p>
+          <Button variant="outline" onClick={handleDeleteAllGuestData}>
+            <Trash2 className="w-5 h-5" />
+            {t('admin.delete_all_button')}
+          </Button>
+        </div>
       </div>
     </div>
   )

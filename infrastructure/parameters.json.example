@@ -29,6 +29,10 @@
   },
   {
     "ParameterKey": "DomainName",
-    "ParameterValue": ""
+    "ParameterValue": "wedding.yourdomain.com"
+  },
+  {
+    "ParameterKey": "CertificateArn",
+    "ParameterValue": "arn:aws:acm:REGION:ACCOUNT_ID:certificate/CERTIFICATE_ID"
   }
 ]

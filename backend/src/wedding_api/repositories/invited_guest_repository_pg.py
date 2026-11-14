@@ -3,7 +3,7 @@
 import logging
 import secrets
 
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from wedding_api.models.database import RSVP, InvitedGuest
@@ -48,7 +48,7 @@ class InvitedGuestRepository:
             await self.db.flush()
             await self.db.refresh(guest)
 
-            logger.info(f"Created invited guest: {guest.name} (ID: {guest.id})")
+            logger.info(f"Created invited guest ID {guest.id}")
 
             return InvitedGuestResponse(
                 id=guest.id,
@@ -62,7 +62,7 @@ class InvitedGuestRepository:
                 updated_at=guest.updated_at,
             )
         except Exception as e:
-            logger.error(f"Error creating invited guest: {e}")
+            logger.error(f"Error creating invited guest: {type(e).__name__}")
             raise
 
     async def get_invited_guest_by_id(self, guest_id: int) -> InvitedGuestResponse | None:
@@ -86,7 +86,7 @@ class InvitedGuestRepository:
                 updated_at=guest.updated_at,
             )
         except Exception as e:
-            logger.error(f"Error getting invited guest by ID {guest_id}: {e}")
+            logger.error(f"Error getting invited guest by ID {guest_id}: {type(e).__name__}")
             raise
 
     async def get_invited_guest_by_phone(self, phone: str) -> InvitedGuestResponse | None:
@@ -110,7 +110,7 @@ class InvitedGuestRepository:
                 updated_at=guest.updated_at,
             )
         except Exception as e:
-            logger.error(f"Error getting invited guest by phone {phone}: {e}")
+            logger.error(f"Error getting invited guest by phone: {type(e).__name__}")
             raise
 
     async def get_invited_guest_by_token(self, token: str) -> InvitedGuestResponse | None:
@@ -134,7 +134,7 @@ class InvitedGuestRepository:
                 updated_at=guest.updated_at,
             )
         except Exception as e:
-            logger.error(f"Error getting invited guest by token: {e}")
+            logger.error(f"Error getting invited guest by token: {type(e).__name__}")
             raise
 
     async def list_invited_guests(self) -> list[InvitedGuestResponse]:
@@ -158,7 +158,7 @@ class InvitedGuestRepository:
                 for guest in guests
             ]
         except Exception as e:
-            logger.error(f"Error listing invited guests: {e}")
+            logger.error(f"Error listing invited guests: {type(e).__name__}")
             raise
 
     async def update_invited_guest(self, guest_id: int, guest_data: InvitedGuestUpdate) -> InvitedGuestResponse | None:
@@ -201,7 +201,7 @@ class InvitedGuestRepository:
                 updated_at=guest.updated_at,
             )
         except Exception as e:
-            logger.error(f"Error updating invited guest {guest_id}: {e}")
+            logger.error(f"Error updating invited guest {guest_id}: {type(e).__name__}")
             raise
 
     async def delete_invited_guest(self, guest_id: int) -> bool:
@@ -219,5 +219,12 @@ class InvitedGuestRepository:
             logger.info(f"Deleted invited guest ID {guest_id}")
             return True
         except Exception as e:
-            logger.error(f"Error deleting invited guest {guest_id}: {e}")
+            logger.error(f"Error deleting invited guest {guest_id}: {type(e).__name__}")
             raise
+
+    async def delete_all_invited_guests(self) -> int:
+        """Delete every invited guest, and with them every QR code token; returns how many were deleted."""
+        count = (await self.db.execute(select(func.count()).select_from(InvitedGuest))).scalar_one()
+        await self.db.execute(delete(InvitedGuest))
+        await self.db.flush()
+        return int(count)
